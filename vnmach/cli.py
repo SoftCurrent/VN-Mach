@@ -31,6 +31,20 @@ def make_director(name: str, args) -> object | None:
     raise SystemExit(f"unknown director {name}")
 
 
+def skill_from(spec: str | None) -> dict:
+    """'controller:condition[:delay_s]' -> measured skill profile from the MuJoCo arm benchmark."""
+    if not spec:
+        return {}
+    from .arm.bench import CONDITIONS, skill_profile
+
+    parts = spec.split(":")
+    controller, condition = parts[0], parts[1] if len(parts) > 1 else "clean"
+    delay = float(parts[2]) if len(parts) > 2 else 0.0
+    prof = skill_profile(controller, delay_s=delay, n_trials=30, **CONDITIONS[condition])
+    print(f"arm skill {spec}: {prof}", file=sys.stderr)
+    return {"skill_success": prof["assembly_success"], "skill_time_multiplier": prof["time_multiplier"]}
+
+
 def config_from(args, seed: int | None = None, director: str | None = None) -> Config:
     econ = EconConfig(launch_cost_per_kg=args.launch_cost, launch_cost_decline=args.launch_decline,
                       starting_cash=args.cash * 1e6)
@@ -48,6 +62,7 @@ def config_from(args, seed: int | None = None, director: str | None = None) -> C
         director_interval=args.director_interval,
         director_location=location,
         econ=econ,
+        **getattr(args, "skill_profile", {}),
     )
 
 
@@ -182,6 +197,8 @@ def main(argv=None) -> None:
         sp.add_argument("--model", default="claude-opus-5-5")
         sp.add_argument("--effort", default="low", choices=["low", "medium", "high", "xhigh", "max"])
         sp.add_argument("--workers", type=int, default=4)
+        sp.add_argument("--skill", help="measure manipulation in the MuJoCo arm and use it, e.g. "
+                        "learned:harsh, scripted:dusty, teleop:clean:0.5, supervisory:clean:1200")
 
     sp = sub.add_parser("closure", help="material closure analysis of the robot design")
     sp.add_argument("--defect-rate", type=float, default=0.02)
@@ -209,6 +226,7 @@ def main(argv=None) -> None:
     sp.set_defaults(fn=cmd_econ)
 
     args = p.parse_args(argv)
+    args.skill_profile = skill_from(getattr(args, "skill", None))
     args.fn(args)
 
 

@@ -40,6 +40,7 @@ class Config:
     # Manipulation skill, measured by the arm benchmark (vnmach.arm.skill_profile):
     skill_success: float = 1.0  # chance a fabricate/assemble manipulation succeeds
     skill_time_multiplier: float = 1.0  # duration vs. nominal scripted control
+    assembly_insertions: int = 4  # a robot assembly is several insertions; each must succeed
     deposits_per_type: int = 12
     deposit_amount: int = 5000
     sample_every: int = 100
@@ -316,8 +317,9 @@ class Simulation:
             return ticks
         return max(1, round(ticks * self.config.skill_time_multiplier))
 
-    def manipulation_failed(self) -> bool:
-        if self.config.skill_success < 1.0 and self.rng.random() > self.config.skill_success:
+    def manipulation_failed(self, insertions: int = 1) -> bool:
+        p = self.config.skill_success ** insertions
+        if p < 1.0 and self.rng.random() > p:
             self.stats["manipulation_failures"] += 1
             return True
         return False
@@ -351,7 +353,7 @@ class Simulation:
                 self.stats["repairs"] += 1
             return
         if job.kind == "assemble":
-            if self.manipulation_failed():
+            if self.manipulation_failed(self.config.assembly_insertions):
                 # Botched assembly: one part is destroyed, the rest go back into inventory.
                 parts = [p for p, q in ROBOT_BOM.items() for _ in range(q)]
                 lost = self.rng.choice(parts)
