@@ -363,6 +363,11 @@ class Operator:
     safe_overtravel: float = 0.003  # m the operator lets the setpoint run ahead unseen
     settle_s: float = 0.5  # move-and-wait: watch this long after a move appears to finish
     approach_h: float = 0.02
+    max_lead: float = 0.03  # m: continuous mode, hand controller ahead of the seen robot
+
+
+_SEARCH_GRID = sorted(((0.0005 * i, 0.0005 * j) for i in range(-8, 9) for j in range(-8, 9)),
+                      key=lambda p: (p[0] ** 2 + p[1] ** 2, math.atan2(p[1], p[0])))
 
 
 class TeleopController:
@@ -396,6 +401,7 @@ class TeleopController:
         self.busy_until = -1.0
         self.state = "approach"
         self.search_k = 0
+        self.last_goal = None
         lag = 2 * self.delay + self.op.reaction_s
         self.k = min(self.op.gain, self.op.stability / lag)
         self.v_down = min(self.op.v_down, self.op.safe_overtravel / lag)
@@ -406,8 +412,8 @@ class TeleopController:
         hole[:2] += self.rng.normal(0, self.op.perception_mm / 1000, 2)
         return o[SL_TIP].copy(), o[SL_TIPV].copy(), hole, o[SL_F].copy()
 
-    def _send(self, t, sp):
-        self.cmd_buf.append((t + self.delay, sp.copy()))
+    def _send(self, t, sp, vmax=0.1):
+        self.cmd_buf.append((t + self.delay, sp.copy(), vmax))
 
     def act(self, obs):
         t = obs[SL_T]
@@ -415,6 +421,7 @@ class TeleopController:
             self.sp = obs[SL_TIP].copy()
             self.master = self.sp.copy()
             self.goal = self.sp.copy()
+            self.vmax = 0.1
         self.obs_buf.append(obs)
         view_t = t - self.delay - self.op.reaction_s
         while len(self.obs_buf) > 1 and self.obs_buf[1][SL_T] <= view_t + 1e-9:
@@ -427,9 +434,9 @@ class TeleopController:
             elif t >= self.busy_until:
                 self._move_wait(t, view)
         while self.cmd_buf and self.cmd_buf[0][0] <= t + 1e-9:
-            self.goal = self.cmd_buf.popleft()[1]
+            _, self.goal, self.vmax = self.cmd_buf.popleft()
         # Onboard trajectory generator: move the servo setpoint toward the latest command.
-        self.sp = _move_toward(self.sp, self.goal, 0.1, self.dt)
+        self.sp = _move_toward(self.sp, self.goal, self.vmax, self.dt)
         return self.servo.torque(obs, self.sp)
 
     def _continuous(self, t, view):
@@ -442,7 +449,7 @@ class TeleopController:
             self.state = "engaged"
         if self.state == "approach":
             goal = hole + np.array([0, 0, op.approach_h])
-            m += np.clip(self.k * (goal - tip) * dt, -0.15 * dt, 0.15 * dt)
+            m += np.clip(self.k * (goal - tip) * dt, -0.08 * dt, 0.08 * dt)
             if np.linalg.norm(goal[:2] - tip[:2]) < 0.0006 and abs(goal[2] - tip[2]) < 0.003:
                 self.state = "insert"
         elif self.state == "insert":
@@ -450,14 +457,22 @@ class TeleopController:
             if f[2] > 4.0 and depth < 0.0005:
                 # Resting on the rim: back off a little and nudge somewhere nearby.
                 m[2] = tip[2] + 0.001
-                m[:2] = hole[:2] + self.rng.normal(0, 0.0008, 2)
+                m[:2] += self.rng.normal(0, 0.0006, 2)
             else:
                 near = tip[2] - SOCKET_TOP < 0.005 + op.safe_overtravel
                 m[2] -= (self.v_down if near else op.v_down) * dt
+                # Until the peg is seen going in, never command deeper than just below the rim.
+                m[2] = max(m[2], min(tip[2], SOCKET_TOP) - op.safe_overtravel)
         else:  # engaged: let the hole guide the peg, keep pushing gently
             m[:2] += 0.5 * (tip[:2] - m[:2])
-            m[2] = max(m[2] - self.v_down * dt, tip[2] - op.safe_overtravel)
+            m[2] = max(m[2] - 0.5 * op.v_down * dt, tip[2] - op.safe_overtravel)
         m += self.rng.normal(0, op.motor_frac * 0.002, 3)  # hand tremor
+        # Don't run the hand controller far ahead of what the robot is seen doing.
+        lead = m - tip
+        n = float(np.linalg.norm(lead))
+        max_lead = op.max_lead * (2 if self.state == "approach" else 1)
+        if n > max_lead:
+            m[:] = tip + lead * (max_lead / n)
         self._send(t, m)
 
     def _move_wait(self, t, view):
@@ -468,25 +483,30 @@ class TeleopController:
             return
         depth = SOCKET_TOP - tip[2]
         exy = hole[:2] - tip[:2]
+        last = self.last_goal if self.last_goal is not None else tip
         if depth > 0.002:
-            goal = np.array([tip[0], tip[1], tip[2] - 0.003])  # push in 3 mm at a time
-        elif f[2] > 3.0:  # resting on the rim: try a nearby spot (square spiral of 0.6 mm)
+            goal = np.array([tip[0], tip[1], tip[2] - 0.003])  # in: push 3 mm at a time
+        elif f[2] > 1.5:
+            # Resting on the rim: correct by the error seen (the arm deflects under load),
+            # plus the next spot of a small search pattern.
+            off = np.array(_SEARCH_GRID[self.search_k % 25])
             self.search_k += 1
-            ring = int(math.ceil((math.sqrt(self.search_k) - 1) / 2))
-            ang = self.rng.uniform(0, 2 * math.pi)
-            off = 0.0006 * max(ring, 1) * np.array([math.cos(ang), math.sin(ang)])
-            goal = np.array([hole[0] + off[0], hole[1] + off[1], SOCKET_TOP - 0.002])
+            goal = np.array([last[0] + exy[0] + off[0], last[1] + exy[1] + off[1], SOCKET_TOP - 0.002])
         elif np.linalg.norm(exy) > 0.0005 or tip[2] > SOCKET_TOP + op.approach_h + 0.005:
             z = SOCKET_TOP + (op.approach_h if np.linalg.norm(exy) > 0.003 else 0.002)
-            goal = np.array([hole[0], hole[1], z])
+            base = last[:2] if np.linalg.norm(exy) < 0.01 else tip[:2]
+            goal = np.array([base[0] + exy[0], base[1] + exy[1], z])
         else:
-            goal = np.array([tip[0], tip[1], SOCKET_TOP - 0.004])  # aligned, hovering: press in
+            goal = np.array([last[0], last[1], SOCKET_TOP - 0.004])  # aligned, hovering: press in
         move = goal - tip
-        goal = tip + move * (1 + self.rng.normal(0, op.motor_frac, 3))
+        goal = goal + np.abs(move) * self.rng.normal(0, op.motor_frac, 3)
         goal[:2] += self.rng.normal(0, 0.0002, 2)
-        self._send(t, goal)
+        self.last_goal = goal.copy()
+        # Moves that end in contact are sent as slow guarded moves.
+        v = 0.01 if goal[2] < SOCKET_TOP + 0.001 else 0.1
+        self._send(t, goal, v)
         # Wait for the command to arrive, the move to finish, and the result to come back.
-        dur = np.linalg.norm(move) / 0.1 + op.settle_s
+        dur = np.linalg.norm(move) / v + op.settle_s
         self.busy_until = t + 2 * self.delay + op.reaction_s + dur
 
 

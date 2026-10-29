@@ -177,12 +177,12 @@ class EnvParams:
     degradation: float = 1.0  # actuator gain multiplier (1 = new, 0.5 = badly worn)
     gravity: float = MARS_GRAVITY
     time_limit_s: float = 30.0
-    chamfer_mm: float = 1.0
+    chamfer_mm: float = 0.5
     friction: float = 0.3
     control_hz: float = 100.0
     force_limit_n: float = 40.0  # sustained contact force above this damages the part
-    jam_force_n: float = 10.0  # pushing this hard with no progress while engaged = jammed
-    jam_window_s: float = 1.5
+    jam_force_n: float = 15.0  # pushing this hard with no progress while engaged = jammed
+    jam_window_s: float = 2.0
     hole_jitter_m: float = 0.02  # true hole position varies per episode by this much
     start_jitter_m: float = 0.02
 
