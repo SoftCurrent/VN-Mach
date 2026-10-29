@@ -5,12 +5,12 @@ All controllers share the same interface::
     ctrl.reset(env)          # once per episode (gives access to the robot's own nominal model)
     action = ctrl.act(obs)   # every control step, returns normalised joint torques
 
-Three families:
+Controller families:
 
 * ``ScriptedController``: analytic IK + joint PD with gravity compensation, driven by a
   state machine (approach, descend/insert, spiral search on contact, compliant insert).
-* ``LearnedController``: the scripted skill plus a small learned residual policy and
-  learned skill parameters, trained by cross-entropy search (see ``train``).
+* ``LearnedController``: the scripted skill with CEM-tuned parameters plus a linear residual
+  setpoint policy, trained by the cross-entropy method on CPU (see ``train``).
 * ``TeleopController``: a human-operator model that sees delayed observations and whose
   commands arrive delayed, in ``"continuous"`` or ``"move_wait"`` mode.
 * ``SupervisoryController``: the operator sends one goal; an onboard skill executes it.
@@ -23,12 +23,12 @@ import math
 import os
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import mujoco
 import numpy as np
 
-from .env import GEAR, INSERT_DEPTH, SL_F, SL_HOLE, SL_Q, SL_QD, SL_T, SL_TIP, SL_TIPV, SOCKET_TOP, ik
+from .env import GEAR, SL_F, SL_HOLE, SL_Q, SL_QD, SL_T, SL_TIP, SL_TIPV, SOCKET_TOP, ik
 
 WEIGHTS_DIR = os.path.join(os.path.dirname(__file__), "weights")
 DEFAULT_WEIGHTS = os.path.join(WEIGHTS_DIR, "residual_cem.npz")
@@ -281,7 +281,10 @@ def _eval_theta(args) -> float:
 def sample_conditions(rng: np.random.Generator, n: int, time_limit_s: float = TRAIN_TIME_LIMIT) -> list:
     eps = []
     for _ in range(n):
-        kw = {k: round(float(rng.uniform(lo, hi)), 2) for k, (lo, hi) in TRAIN_RANGES.items()}
+        # Log-uniform: tight clearances and badly worn motors are rarer, but they are the cases
+        # where the skill is most likely to fail, so give them as much weight as easy ones.
+        kw = {k: round(float(np.exp(rng.uniform(np.log(lo), np.log(hi)))) if k != "noise_mm"
+                       else float(rng.uniform(lo, hi)), 3) for k, (lo, hi) in TRAIN_RANGES.items()}
         kw["time_limit_s"] = time_limit_s
         eps.append((tuple(sorted(kw.items())), int(rng.integers(2**31))))
     return eps
@@ -292,21 +295,30 @@ def _pool(workers: int):
     return mp.get_context("fork").Pool(workers) if workers > 1 else None
 
 
-def train(seed: int = 0, iters: int = 14, pop: int = 24, elite: int = 6, episodes: int = 6,
-          init_std: float = 0.3, workers: int | None = None, out: str | None = DEFAULT_WEIGHTS,
-          validate: int = 96, verbose: bool = True) -> dict:
+def train(seed: int = 0, iters: int = 20, pop: int = 24, elite: int = 6, episodes: int = 8,
+          init_std: float = 0.3, lr: float = 1.0, workers: int | None = None,
+          out: str | None = DEFAULT_WEIGHTS, validate: int = 96, residual: bool = True,
+          verbose: bool = True) -> dict:
     """Cross-entropy method over ``theta``. Deterministic for a given seed (any worker count).
 
     Each iteration samples ``pop`` candidates and scores all of them on the same ``episodes``
-    randomly drawn conditions (common random numbers). Finally the CEM mean is compared with the
-    untrained skill (theta = 0) on ``validate`` held-out episodes, and saved only if it is better.
+    randomly drawn conditions (common random numbers); the mean moves a fraction ``lr`` of the
+    way to the elite mean (``lr=1``: plain CEM). At the end the final mean is compared with the
+    untrained skill (theta = 0) on ``validate`` held-out episodes and saved only if it is better.
     """
     t0 = time.time()
     workers = workers or min(4, os.cpu_count() or 1)
     rng = np.random.default_rng(seed)
     mu = np.zeros(N_PARAMS)
+    # Search over the skill's parameters and (unless residual=False) the linear residual W.
+    # Without the residual, W stays exactly zero (pure parameter tuning of the scripted skill).
+    mask = np.zeros(N_PARAMS)
+    mask[:len(TUNED)] = 1.0
+    if residual:
+        mask[len(TUNED):] = 1.0
     std = np.full(N_PARAMS, init_std)
     std[:len(TUNED)] = 0.25
+    std *= mask
     history = []
     pool = _pool(workers)
     mapper = pool.map if pool else map
@@ -317,29 +329,34 @@ def train(seed: int = 0, iters: int = 14, pop: int = 24, elite: int = 6, episode
             cands[0] = mu  # always re-score the current mean
             scores = np.array(list(mapper(_eval_theta, [(c, eps) for c in cands])))
             idx = np.argsort(-scores)[:elite]
-            mu = cands[idx].mean(axis=0)
-            std = np.sqrt(cands[idx].var(axis=0) + 0.02 ** 2)  # small floor keeps exploring
+            mu = (1 - lr) * mu + lr * cands[idx].mean(axis=0)
+            std = np.sqrt((1 - lr) * std ** 2 + lr * cands[idx].var(axis=0) + 0.02 ** 2) * mask
             history.append((float(scores[0]), float(scores[idx].mean())))
             if verbose:
                 print(f"iter {it + 1:2d}/{iters}  mean-policy score {scores[0]:+.3f}  "
                       f"elite {scores[idx].mean():+.3f}  ({time.time() - t0:5.1f}s)", flush=True)
         val_eps = sample_conditions(np.random.default_rng(seed + 10_000), validate)
         chunks = [val_eps[i::workers] for i in range(workers)]
-        s_new = float(np.mean(list(mapper(_eval_theta, [(mu, c) for c in chunks]))))
-        s_base = float(np.mean(list(mapper(_eval_theta, [(np.zeros(N_PARAMS), c) for c in chunks]))))
+
+        def val(theta):
+            return float(np.mean(list(mapper(_eval_theta, [(theta, c) for c in chunks]))))
+
+        s_new, s_base = val(mu), val(np.zeros(N_PARAMS))
     finally:
         if pool:
             pool.close()
             pool.join()
+    theta = mu
     elapsed = time.time() - t0
-    result = {"theta": mu, "val_score": s_new, "val_score_scripted": s_base, "train_seconds": elapsed,
+    result = {"theta": theta, "val_score": s_new, "val_score_scripted": s_base, "train_seconds": elapsed,
               "history": history, "improved": s_new > s_base}
     if verbose:
-        print(f"validation ({validate} held-out episodes): learned {s_new:+.3f}  scripted {s_base:+.3f}  "
-              f"train time {elapsed:.1f}s")
+        print(f"validation ({validate} held-out episodes): learned {s_new:+.3f}  "
+              f"scripted {s_base:+.3f}  train time {elapsed:.1f}s")
     if out and result["improved"]:
-        save_weights(out, mu, seed=seed, iters=iters, pop=pop, episodes=episodes, val_score=s_new,
-                     val_score_scripted=s_base, train_seconds=elapsed, history=np.array(history))
+        save_weights(out, theta, seed=seed, iters=iters, pop=pop, episodes=episodes, residual=residual,
+                     val_score=s_new, val_score_scripted=s_base, train_seconds=elapsed,
+                     history=np.array(history))
         if verbose:
             print(f"saved {out}")
     elif out and verbose:

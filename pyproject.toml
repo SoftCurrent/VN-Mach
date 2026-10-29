@@ -7,6 +7,7 @@ dependencies = []
 
 [project.optional-dependencies]
 claude = ["anthropic>=2.3"]
+arm = ["mujoco>=3.0", "gymnasium>=1.0", "numpy"]
 dev = ["pytest"]
 
 [project.scripts]
@@ -17,4 +18,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["vnmach"]
+packages = ["vnmach", "vnmach.arm"]
+
+[tool.setuptools.package-data]
+"vnmach.arm" = ["weights/*.npz"]
