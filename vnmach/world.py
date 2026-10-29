@@ -120,6 +120,25 @@ class World:
                 cells[pos] = have - got
         return got
 
+    def prospect(self, rtype: str, amount: int) -> Pos:
+        """Discover a new vein. Easy finds are near the base; each later find is further out."""
+        self.finds = getattr(self, "finds", Counter())
+        self.finds[rtype] += 1
+        radius = min(self.size // 2 - 3, 6 + 3 * self.finds[rtype])
+        while True:
+            cx = self.depot[0] + self.rng.randint(-radius, radius)
+            cy = self.depot[1] + self.rng.randint(-radius, radius)
+            if self.in_bounds((cx, cy)) and dist((cx, cy), self.depot) >= radius // 2:
+                break
+        for _ in range(4):
+            p = (min(self.size - 1, max(0, cx + self.rng.randint(-2, 2))),
+                 min(self.size - 1, max(0, cy + self.rng.randint(-2, 2))))
+            self.deposits[rtype][p] = self.deposits[rtype].get(p, 0) + amount
+        return (cx, cy)
+
+    def in_bounds(self, p: Pos) -> bool:
+        return 0 <= p[0] < self.size and 0 <= p[1] < self.size
+
     def remaining(self) -> dict[str, int]:
         return {r: sum(c.values()) for r, c in self.deposits.items()}
 

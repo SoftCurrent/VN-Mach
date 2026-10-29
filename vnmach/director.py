@@ -25,6 +25,8 @@ from __future__ import annotations
 from .bom import FAB_KIT, FAB_KITS_REQUIRED
 from .world import SOL_TICKS
 
+FAB_BUILD_SOLS = 150  # kits + install, observed in runs
+MIN_PAYBACK_SOLS = 400
 CATALOG_ITEMS = ("chip", "motor", "sensor", "solar_panel", "battery", "wiring", "frame", "robot", "fab_tooling")
 
 
@@ -60,6 +62,7 @@ class HeuristicDirector:
         self.total_ticks = total_ticks
         self.robots_per_fab = robots_per_fab
         self.fab_ordered = False
+        self.last_starved = 0
 
     def chips_pipeline(self, snap: dict) -> int:
         e = snap["economy"]
@@ -100,7 +103,13 @@ class HeuristicDirector:
             return False
         if self.strategy == "fab" or self.fab_ordered or snap["fabs"] > 0:
             return True
-        landed = snap["economy"]["landed_cost_usd"]
+        e = snap["economy"]
+        # Payback: tooling lands with the first landing at t=0, else at the next window + transit,
+        # then the fab still has to be built. Too close to the end, it never pays back.
+        ready_sol = 0 if snap["t"] == 0 else e["next_window_sol"] + e["transit_sols"]
+        if self.total_ticks // SOL_TICKS - (ready_sol + FAB_BUILD_SOLS) < MIN_PAYBACK_SOLS:
+            return False
+        landed = e["landed_cost_usd"]
         import_cost = self.chips_still_needed(snap) * landed["chip"] + self.import_downtime_cost(snap)
         return import_cost > landed["fab_tooling"]
 
@@ -122,8 +131,10 @@ class HeuristicDirector:
             if short > 0:
                 orders["chip"] = short
 
-        # Contracts: take what the fleet can plausibly deliver.
-        capacity = max(1, pop // 5) - len(e["active_contracts"])
+        # Contracts: take what the fleet can plausibly deliver; nothing while starved of feedstock.
+        starving = snap["starved_feedstock"] - self.last_starved > pop * 25
+        self.last_starved = snap["starved_feedstock"]
+        capacity = 0 if starving else max(1, pop // 5) - len(e["active_contracts"])
         accept = [c["id"] for c in sorted(e["contract_offers"], key=lambda c: -c["payment_musd"])
                   if c["sols_left"] >= 120][:max(0, capacity)]
 

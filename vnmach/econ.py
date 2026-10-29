@@ -264,6 +264,7 @@ class Economy:
             "launch_cost_per_kg": round(self.launch_cost_per_kg(t)),
             "landed_cost_usd": {k: round(self.landed_cost(k, t)) for k in ("chip", "robot", "fab_tooling")},
             "next_window_sol": self.next_window(t) // SOL_TICKS,
+            "transit_sols": self.cfg.transit_sols,
             "manifest": dict(self.manifest),
             "in_transit": [{"items": dict(s.items), "arrives_sol": s.arrives // SOL_TICKS} for s in self.in_transit],
             "contract_offers": [c.summary(t) for c in self.contracts if c.status == "offered"],

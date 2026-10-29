@@ -196,8 +196,10 @@ class ScriptedController:
             if robot.pos == pos:
                 return ("take_stock", rtype, net[rtype]) if from_stock else ("mine", rtype)
             return ("move", pos)
-        if any(net[r] for r in RAW):
-            sim.stats["starved_feedstock"] += 1  # needed deposits are exhausted
+        missing = [r for r in RAW if net[r]]
+        if missing:
+            sim.stats["starved_feedstock"] += 1  # every known deposit is exhausted: go look for more
+            return ("prospect", missing[0])
         else:
             sim.stats["waiting_on_chips"] += 1  # only imports missing: none available and fabs busy/absent
         return ("wait",)

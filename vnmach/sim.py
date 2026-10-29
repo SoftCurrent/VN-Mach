@@ -16,6 +16,7 @@ INSPECTION_DETECT_RATE = 0.9
 REPAIR_TICKS = 10
 FATAL_PARTS = ("chip", "frame")
 BLOCKED_SLEEP_TICKS = 3
+PROSPECT_FIND_CHANCE = 1 / 150  # per robot-tick spent surveying
 CONJUNCTION_SOLS = 14  # Sun between Earth and Mars: no comms
 
 
@@ -248,6 +249,17 @@ class Simulation:
                 w.imports[action[1]] -= 1
                 r.inventory[action[1]] += 1
                 self.stats[f"used_imported_{action[1]}"] += 1
+        elif kind == "prospect":
+            if r.energy >= MOVE_COST:
+                r.energy -= MOVE_COST
+                dx, dy = self.rng.choice(((1, 0), (-1, 0), (0, 1), (0, -1)))
+                p = (r.pos[0] + dx, r.pos[1] + dy)
+                if w.in_bounds(p):
+                    r.pos = p
+                self.stats["prospect_ticks"] += 1
+                if self.rng.random() < PROSPECT_FIND_CHANCE:
+                    w.prospect(action[1], self.config.deposit_amount)
+                    self.stats[f"veins_found_{action[1]}"] += 1
         elif kind == "deliver":
             for raw in RAW:
                 n = r.inventory[raw]
@@ -401,6 +413,7 @@ class Simulation:
             "deposits_remaining": w.remaining(),
             "harvested": self.stats["harvested"],
             "waiting_on_chips": self.stats["waiting_on_chips"],
+            "starved_feedstock": self.stats["starved_feedstock"],
             "mean_efficiency": round(sum(r.efficiency for r in alive) / len(alive), 3) if alive else 0.0,
             "max_generation": max((r.generation for r in alive), default=0),
             "max_children_genome": max((r.genome.max_children for r in alive), default=0),
