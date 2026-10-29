@@ -65,34 +65,40 @@ Final cash, $M, 2000 sols:
 
 | $/kg landed | import | fab | auto |
 |---|---|---|---|
-| 20,000 | 46,257 | 48,772 | **48,909** |
-| 5,000 | 11,895 | 12,507 | **12,536** |
-| 1,000 | 2,732 | 2,836 | **2,837** |
-| 250 | 1,760 | 1,797 | **1,808** |
+| 20,000 | 47,718 | **62,154** | 59,811 |
+| 5,000 | 12,260 | **15,852** | 15,262 |
+| 1,000 | 2,805 | **3,505** | 3,382 |
+| 250 | 1,810 | **2,260** | 2,185 |
 
 Mission length at $5,000/kg:
 
 | sols | import | fab | auto |
 |---|---|---|---|
 | 800 | 4,130 | **4,204** | 4,130 (stays on imports) |
-| 2000 | 11,895 | 12,507 | **12,536** (fab at sol ~1145) |
+| 2000 | 12,260 | **15,852** | 15,262 (first fab at sol ~1145) |
 | 4000 | 22,410 | **35,009** | **35,009** (fab at t=0) |
 
 What this says:
-1. **Shipping chips is right early; a fab wins as the mission gets longer.**
-   `auto` imports first and switches around sol 1145 on a 2000-sol mission.
-   Over 4000 sols, fabs are worth +56% cash, because imports only arrive
-   once per 780-sol window, and robots that die between windows aren't
-   earning.
-2. **Launch cost moves revenue far more than strategy.** Contract prices are
+1. **Under these assumptions, landing fab tooling on day one wins at every
+   launch cost and mission length tested.** The intuition that shipping
+   chips is right early only holds in the sense that importing is nearly
+   as good on short missions (800 sols: −2%). Fab tooling costs $80M
+   landed, which is small next to what a bigger, steadier fleet earns.
+   Imports arrive once per 780-sol window, and robots that die between
+   windows aren't earning. Over 4000 sols, fabs are worth +56% cash.
+2. **`auto` switches too late.** Its break-even rule waits until sol ~1145
+   and gives up ~4% against fab-from-day-one. Its downtime estimate
+   undercounts the value of growth. This is the decision to hand a
+   better planner (Claude) and measure.
+3. **Launch cost moves revenue far more than strategy.** Contract prices are
    pegged to launch cost, so at $250/kg everything Mars-made is worth ~25×
    less than at $20,000/kg.
-3. **One fab gives linear growth.** Fabs must make tooling for more fabs,
+4. **One fab gives linear growth.** Fabs must make tooling for more fabs,
    and tooling has to get priority on the fab or chip demand starves it.
-4. **Local feedstock runs out.** Without prospecting, the ice veins ran dry
+5. **Local feedstock runs out.** Without prospecting, the ice veins ran dry
    around sol 2000 and the colony collapsed (with $750M of contract
    penalties). Prospecting finds veins progressively further out.
-5. **Chips are the only vitamin** (99% closure by mass), **a single seed
+6. **Chips are the only vitamin** (99% closure by mass), **a single seed
    robot is a single point of failure**, **self-repair keeps a long-lived
    fleet at ~100% efficiency** (vs ~55% without), and **replication governors
    must be protected from copy errors**.
@@ -139,6 +145,5 @@ manipulation skill changes the colony. It runs `ui/engine.js`, a
 JavaScript port of the Python model; run `python ui/build.py` after
 editing either file.
 
-The `auto` rule isn't optimal: on the 800-sol mission, landing tooling at
-t=0 beats it by ~2%. Whether Claude can beat these rules is what
-`compare --directors auto,claude` is for.
+Whether Claude can beat these rules is what `compare --directors
+auto,fab,claude` is for (needs Anthropic API credentials).
