@@ -97,6 +97,48 @@ What this says:
    fleet at ~100% efficiency** (vs ~55% without), and **replication governors
    must be protected from copy errors**.
 
+## Manipulation: what the AI controlling the arm can do
+
+`python -m vnmach.arm bench` runs a 4-DoF arm seating a part in a socket
+(peg-in-hole) under Mars gravity, 30 trials per cell:
+
+| Controller | clean | dusty | worn motors | tight fit | harsh (all three) |
+|---|---|---|---|---|---|
+| scripted (IK + PD + spiral search) | 100%, 3.9 s | 100%, 7.6 s | 100%, 8.3 s | 97%, 5.3 s | **37%**, 6.9 s |
+| learned (CEM-tuned skill + residual) | 100%, 3.8 s | 100%, 7.9 s | 100%, 3.3 s | 93%, 10.9 s | **90%**, 6.9 s |
+| teleop, 0 s / 0.5 s / 2 s delay | 97% / 87% / **0%** | | | | |
+| supervisory, 1200 s delay (Earth) | 100%: onboard skill executes, delay only adds latency | | | | |
+
+Feeding these into the colony (`--skill controller:condition`, auto
+director, 2000 sols, a robot assembly = 4 insertions):
+
+| Arm control | Final cash |
+|---|---|
+| scripted, clean | $15.1B |
+| scripted, harsh | **colony dies** (1.9% of assemblies succeed) |
+| learned, harsh | $12.9B |
+| teleop from 0.5 s away, clean | $5.7B |
+
+So:
+- **Robots on Mars can't be teleoperated from Earth.** Teleop already
+  fails at a 2 s delay; Mars is 4–24 minutes away.
+- **Autonomy has to live on the robot.** Earth (or a big model anywhere)
+  can only set goals.
+- **Learned control matters most when conditions stack up.** Dust plus
+  wear plus tight tolerances kill a hand-tuned controller. The learned
+  version is worse on tight tolerances alone, so this is one decent
+  policy, not a solved problem.
+
+## Play with it
+
+`ui/vn-mach-control.html` is a self-contained page with live map, charts
+and log. You can be the director yourself (policy sliders, Earth orders
+with landed-cost previews, contract board, conjunction blackouts) or hand
+control to `auto` / `import` / `fab`. Pick an arm-control row to see how
+manipulation skill changes the colony. It runs `ui/engine.js`, a
+JavaScript port of the Python model; run `python ui/build.py` after
+editing either file.
+
 The `auto` rule isn't optimal: on the 800-sol mission, landing tooling at
 t=0 beats it by ~2%. Whether Claude can beat these rules is what
 `compare --directors auto,claude` is for.
