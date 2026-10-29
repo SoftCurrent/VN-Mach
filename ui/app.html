@@ -1,0 +1,588 @@
+<title>VN-Mach Mission Control</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an operations console. Live map on the left, the director's desk on the right,
+   telemetry and logs underneath. Map keeps Mars colours in both themes. */
+:root {
+  --bg: #eceff2; --panel: #ffffff; --panel-2: #f5f7f9; --ink: #16202a; --muted: #5a6572; --line: #d4dae0;
+  --accent: #2c6390; --accent-ink: #ffffff; --ochre: #b0602a;
+  --good: #2b7a4b; --warn: #a86b12; --bad: #b02a22;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1217; --panel: #141b22; --panel-2: #10161c; --ink: #e2e8ee; --muted: #8995a3; --line: #25303b;
+  --accent: #79acd9; --accent-ink: #0d1217; --ochre: #d98a4e; --good: #5cbf85; --warn: #e0a843; --bad: #ef6b62;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d1217; --panel: #141b22; --panel-2: #10161c; --ink: #e2e8ee; --muted: #8995a3; --line: #25303b;
+  --accent: #79acd9; --accent-ink: #0d1217; --ochre: #d98a4e; --good: #5cbf85; --warn: #e0a843; --bad: #ef6b62;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 32px; }
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 14px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 12px; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type=number], select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; min-width: 0; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+label { color: var(--muted); font-size: 12.5px; }
+
+/* header */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { font-size: 26px; font-weight: 700; }
+.brand span { color: var(--muted); font-size: 13px; }
+.clock { font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: .04em; line-height: 1; }
+.clock small { font-size: 14px; color: var(--muted); font-weight: 500; letter-spacing: .06em; }
+.transport { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--line); background: var(--panel-2); white-space: nowrap; }
+.pill.warn { color: var(--warn); border-color: currentColor; }
+.pill.bad { color: var(--bad); border-color: currentColor; }
+.pill.good { color: var(--good); border-color: currentColor; }
+
+/* main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+.stack { display: grid; gap: 14px; }
+.mapbox { position: relative; }
+#map { width: 100%; aspect-ratio: 1; max-width: 100%; display: block; border-radius: 6px; image-rendering: pixelated; background: #3a2418; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.legend i.sq { border-radius: 2px; }
+
+/* KPI strip */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.kpi b { display: block; font-family: var(--mono); font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi span { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+
+/* director desk */
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 10px 0 12px; }
+.tabs button { padding: 5px 11px; }
+.tabs button[aria-pressed=true] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+@media (max-width: 480px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.field { display: grid; gap: 3px; min-width: 0; }
+.field .row { display: flex; justify-content: space-between; gap: 8px; }
+.toggle { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 13.5px; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset:disabled { opacity: .55; }
+.section { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; display: grid; gap: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+td { padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.r, th.r { text-align: right; }
+.scroll { overflow-x: auto; }
+.orders input { width: 64px; }
+.contracts { display: grid; gap: 8px; max-height: 300px; overflow-y: auto; }
+.contract { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.contract .what { font-weight: 600; text-transform: capitalize; }
+.contract .meta { font-size: 12px; color: var(--muted); }
+.progress { grid-column: 1 / -1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); }
+.contract.late .progress > div { background: var(--warn); }
+
+/* charts + log */
+.lower { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 900px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+@media (max-width: 480px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.chart h3 { font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.chart h3 .num { font-family: var(--mono); font-weight: 500; font-size: 13px; color: var(--muted); }
+.chart canvas { width: 100%; height: 110px; display: block; }
+.log { font-size: 12.5px; max-height: 330px; overflow-y: auto; display: grid; gap: 2px; }
+.log div { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.log .sol { font-family: var(--mono); color: var(--muted); }
+.log .k-storm, .log .k-contract-bad, .log .k-death { color: var(--warn); }
+.log .k-fab, .log .k-contract-good { color: var(--good); }
+.log .k-launch, .log .k-landing { color: var(--accent); }
+.arm tr.sel td { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.arm tr { cursor: pointer; }
+.arm tr:hover td { background: var(--panel-2); }
+.bad-t { color: var(--bad); } .good-t { color: var(--good); } .warn-t { color: var(--warn); }
+.summary { display: none; }
+.summary.show { display: block; border: 1px solid var(--accent); }
+.footer { color: var(--muted); font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="brand"><h1>VN-Mach</h1><span>Self-replicating robot colony, Mars</span></div>
+    <div class="clock" aria-live="off"><small>SOL</small> <span id="sol" class="num">0</span> <small id="solOf">/ 2000</small></div>
+    <div class="transport">
+      <button id="play" class="primary" aria-label="Play">Play</button>
+      <button id="stepSol" title="Advance one sol">+1 sol</button>
+      <select id="speed" aria-label="Speed">
+        <option value="0.2">0.2 sol/frame</option>
+        <option value="1" selected>1 sol/frame</option>
+        <option value="5">5 sols/frame</option>
+        <option value="20">20 sols/frame</option>
+      </select>
+    </div>
+    <div id="status" class="transport"></div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Colony status"></section>
+
+  <div class="main">
+    <div class="stack">
+      <section class="card mapbox">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <h2>Jezero-class site, 48 × 48 km</h2><span class="note" id="mapnote"></span>
+        </div>
+        <canvas id="map" width="576" height="576" style="margin-top:10px" aria-label="Map of the colony"></canvas>
+        <div class="legend">
+          <span><i style="background:#f4efe6"></i>Building copies</span>
+          <span><i style="background:#79b8f0"></i>Fab crew</span>
+          <span><i style="background:#f2c14e"></i>Contract work</span>
+          <span><i style="background:#9aa5b1"></i>Harvesting</span>
+          <span><i style="background:#ef5d52"></i>Self-repair</span>
+          <span><i class="sq" style="background:#7a2e1b"></i>Hematite</span>
+          <span><i class="sq" style="background:#bfe6f2"></i>Ice</span>
+          <span><i class="sq" style="background:#ffffff;outline:1px solid #888"></i>Base and fabs</span>
+          <span><i class="sq" style="background:#f2c14e;transform:rotate(45deg)"></i>Contract site</span>
+        </div>
+      </section>
+      <section class="card summary" id="summary" aria-live="polite"></section>
+    </div>
+
+    <div class="stack">
+      <section class="card">
+        <h2>Director</h2>
+        <div class="tabs" role="group" aria-label="Who runs the colony">
+          <button data-mode="auto" aria-pressed="true">Auto</button>
+          <button data-mode="you" aria-pressed="false">You</button>
+          <button data-mode="import" aria-pressed="false">Import chips</button>
+          <button data-mode="fab" aria-pressed="false">Build fab</button>
+        </div>
+        <p class="note" id="modeNote"></p>
+
+        <fieldset id="policy" class="section">
+          <h3 style="font-size:16px">Colony policy</h3>
+          <div class="grid2">
+            <label class="toggle"><input type="checkbox" id="p_replicate" checked> Robots build copies</label>
+            <label class="toggle"><input type="checkbox" id="p_build_fab"> Build chip fabs</label>
+            <div class="field"><div class="row"><label for="p_target_fabs">Target fabs</label><span class="num" id="v_target_fabs"></span></div>
+              <input type="range" id="p_target_fabs" min="0" max="12" step="1" value="1"></div>
+            <div class="field"><div class="row"><label for="p_fab_share">Fab crew</label><span class="num" id="v_fab_share"></span></div>
+              <input type="range" id="p_fab_share" min="0" max="1" step="0.05" value="0.5"></div>
+            <div class="field"><div class="row"><label for="p_contract_share">Contract crew</label><span class="num" id="v_contract_share"></span></div>
+              <input type="range" id="p_contract_share" min="0" max="1" step="0.05" value="0"></div>
+            <div class="field"><div class="row"><label for="p_chip_reserve">Chips held for fab kits</label><span class="num" id="v_chip_reserve"></span></div>
+              <input type="range" id="p_chip_reserve" min="0" max="20" step="1" value="0"></div>
+          </div>
+          <p class="note">Robots that can't build copies (each makes at most 3) work contracts, or harvest when there are none.</p>
+        </fieldset>
+
+        <fieldset id="ordersBox" class="section orders">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <h3 style="font-size:16px">Earth orders</h3><span class="note" id="windowNote"></span>
+          </div>
+          <div class="scroll"><table>
+            <thead><tr><th>Item</th><th class="r">Landed each</th><th class="r">Qty</th></tr></thead>
+            <tbody id="orderRows"></tbody>
+          </table></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="note" id="orderTotal"></span>
+            <button id="placeOrder" class="primary">Add to manifest</button>
+          </div>
+          <p class="note" id="manifestNote"></p>
+        </fieldset>
+
+        <div class="section">
+          <h3 style="font-size:16px">Contracts</h3>
+          <div class="contracts" id="contracts"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="lower">
+    <section class="card">
+      <h2>Telemetry</h2>
+      <div class="charts" style="margin-top:10px">
+        <div class="chart"><h3>Robots <span class="num" id="c_pop"></span></h3><canvas id="ch_pop" height="110"></canvas></div>
+        <div class="chart"><h3>Cash <span class="num" id="c_cash"></span></h3><canvas id="ch_cash" height="110"></canvas></div>
+        <div class="chart"><h3>Chips made on Mars <span class="num" id="c_chips"></span></h3><canvas id="ch_chips" height="110"></canvas></div>
+        <div class="chart"><h3>Chip fabs <span class="num" id="c_fabs"></span></h3><canvas id="ch_fabs" height="110"></canvas></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Mission log</h2>
+      <div class="log" id="log" style="margin-top:8px" aria-live="off"></div>
+    </section>
+  </div>
+
+  <div class="lower">
+    <section class="card">
+      <h2>Scenario</h2>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field"><label for="s_launch">Launch cost, $/kg landed</label>
+          <select id="s_launch"><option value="20000">$20,000 (early flights)</option><option value="5000" selected>$5,000</option><option value="1000">$1,000</option><option value="250">$250 (mature)</option></select></div>
+        <div class="field"><label for="s_sols">Mission length</label>
+          <select id="s_sols"><option value="800">800 sols</option><option value="2000" selected>2000 sols</option><option value="4000">4000 sols</option></select></div>
+        <div class="field"><label for="s_chips">Chips on first landing</label><input type="number" id="s_chips" min="0" max="200" value="20"></div>
+        <div class="field"><label for="s_seed">Seed</label><input type="number" id="s_seed" min="0" max="9999" value="0"></div>
+        <label class="toggle"><input type="checkbox" id="s_storms" checked> Dust storms</label>
+        <div style="display:flex;justify-content:flex-end"><button id="restart">Restart mission</button></div>
+      </div>
+      <p class="note" style="margin-top:10px">Arm control, below, sets how reliably and how fast robots seat parts when they fabricate and assemble. Pick a row, then restart.</p>
+    </section>
+    <section class="card arm">
+      <h2>Arm control (measured in MuJoCo)</h2>
+      <div class="scroll" style="margin-top:8px"><table>
+        <thead><tr><th>Controller</th><th>Conditions</th><th class="r">Seats part</th><th class="r">Time ×</th><th class="r">Robot assembly*</th></tr></thead>
+        <tbody id="armRows"></tbody>
+      </table></div>
+      <p class="note" style="margin-top:8px">*A robot needs 4 insertions; all must succeed. Dusty = 3 mm camera error, worn = motors at 25% torque, tight = 0.1 mm clearance, harsh = all three. Teleop delays are one-way; Mars is 240–1,440 s away, so only supervisory control (send goals, let the robot execute) works from Earth.</p>
+    </section>
+  </div>
+
+  <p class="footer">JavaScript port of the Python model in the VN-Mach repository (same rules and numbers). Prices, launch costs and contract demand are assumptions; change them in <span class="mono">vnmach/econ.py</span>.</p>
+</div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+(() => {
+const { Sim, HeuristicDirector, CATALOG, SOL_TICKS, money, label, describe } = VN;
+const ARM = /*ARM_PRESETS*/[];
+const $ = id => document.getElementById(id);
+const fmtInt = n => Math.round(n).toLocaleString("en-US");
+
+let sim, mode = "auto", running = false, armIdx = 0, lastLog = 0, ended = false;
+const ORDER_ITEMS = ["chip", "robot", "fab_tooling", "motor", "sensor"];
+const ORDER_NOTES = { chip: "electronics module", robot: "complete, 2.5 t", fab_tooling: "first fab needs one", motor: "spare", sensor: "spare" };
+
+function storage(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+function newSim() {
+  const sols = +$("s_sols").value, arm = ARM[armIdx] || { success: 1, time_multiplier: 1 };
+  const cfg = { seed: +$("s_seed").value, ticks: sols * SOL_TICKS, seed_chips: +$("s_chips").value,
+    dust_storms: $("s_storms").checked, skill_success: arm.success, skill_time_multiplier: arm.time_multiplier,
+    director_location: "mars" };
+  const econ = { launch_cost_per_kg: +$("s_launch").value };
+  sim = new Sim(cfg, econ, mode === "you" ? null : new HeuristicDirector(mode, 150, cfg.ticks));
+  lastLog = 0; ended = false;
+  $("log").innerHTML = "";
+  $("summary").className = "card summary";
+  $("solOf").textContent = `/ ${sols}`;
+  sim.log("landing", "Landing site ready. Plan the first landing in Earth orders: anything ordered before sol 0 lands with it.");
+  setRunning(false);
+  render(true);
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  if (sim) sim.director = m === "you" ? null : new HeuristicDirector(m, 150, sim.config.ticks);
+  if (sim && m !== "you" && sim.t > 0) sim.director.fabOrdered = sim.world.fab_tooling > 0 || sim.stats.imported_fab_tooling > 0;
+  $("modeNote").textContent = {
+    you: "You're the director, sitting at mission control on Earth. Commands take ~1 tick of light time, and wait out the 14-sol solar conjunction blackout.",
+    auto: "Auto imports chips while that's cheaper, then switches to building fabs once the chips still needed (plus revenue lost waiting for launch windows) cost more than fab tooling.",
+    import: "Never builds a fab. Orders chips from Earth every launch window.",
+    fab: "Lands fab tooling with the first landing, then grows fabs with the fleet.",
+  }[m];
+  $("policy").disabled = m !== "you"; $("ordersBox").disabled = m !== "you";
+  storage("vn.mode", m);
+  renderDesk();
+}
+
+function setRunning(r) {
+  running = r && !ended;
+  $("play").textContent = running ? "Pause" : (sim && sim.t > 0 ? "Resume" : "Play");
+  if (running) requestAnimationFrame(loop);
+}
+
+function advance(sols) {
+  const ticks = Math.max(1, Math.round(sols * SOL_TICKS));
+  for (let i = 0; i < ticks; i++) {
+    if (sim.t >= sim.config.ticks) { finish(); break; }
+    sim.step();
+    if (!sim.population && !sim.econ.in_transit.length && sim.t > 1) { finish(); break; }
+  }
+}
+function loop() {
+  if (!running) return;
+  advance(+$("speed").value);
+  render();
+  if (running) requestAnimationFrame(loop);
+}
+function finish() {
+  if (ended) return;
+  ended = true; running = false;
+  sim.sample();
+  const s = sim.snapshot(), led = s.ledger;
+  const rows = Object.entries(led).sort((a, b) => a[1] - b[1])
+    .map(([k, v]) => `<tr><td>${label(k)}</td><td class="r num ${v < 0 ? "bad-t" : "good-t"}">${money(v)}</td></tr>`).join("");
+  const el = $("summary");
+  el.innerHTML = `<h2>Mission complete, sol ${s.sol}</h2>
+    <p style="margin:8px 0 10px;font-size:15px">Final cash <b class="num">${money(s.cash)}</b> with <b class="num">${s.population}</b> robots,
+    <b class="num">${s.fabs}</b> chip fab${s.fabs === 1 ? "" : "s"} and <b class="num">${fmtInt(s.chips_made)}</b> chips made on Mars.
+    Try the same seed with another director to compare.</p>
+    <div class="scroll"><table><tbody>${rows}<tr><td><b>Starting capital</b></td><td class="r num">${money(sim.econ.cfg.starting_cash)}</td></tr></tbody></table></div>`;
+  el.className = "card summary show";
+  setRunning(false);
+  render(true);
+}
+
+// ---- rendering -------------------------------------------------------------
+const ROLE_COLOR = { replicate: "#f4efe6", fab: "#79b8f0", contract: "#f2c14e", harvest: "#9aa5b1", repair: "#ef5d52" };
+let terrain = null;
+function buildTerrain(size, seed) {
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const x = c.getContext("2d"), img = x.createImageData(size, size);
+  let s = seed * 9301 + 49297;
+  const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  const h = []; for (let i = 0; i < size * size; i++) h.push(rnd());
+  for (let pass = 0; pass < 3; pass++) for (let i = 0; i < size * size; i++) {
+    const xx = i % size, yy = Math.floor(i / size); let sum = 0, n = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = xx + dx, Y = yy + dy; if (X >= 0 && Y >= 0 && X < size && Y < size) { sum += h[Y * size + X]; n++; } }
+    h[i] = sum / n;
+  }
+  for (let i = 0; i < size * size; i++) {
+    const v = (h[i] - 0.5) * 2.4;
+    img.data[i * 4] = 150 + v * 40; img.data[i * 4 + 1] = 86 + v * 26; img.data[i * 4 + 2] = 52 + v * 18; img.data[i * 4 + 3] = 255;
+  }
+  x.putImageData(img, 0, 0);
+  return c;
+}
+function drawMap() {
+  const cv = $("map"), ctx = cv.getContext("2d"), w = sim.world, N = w.size, cell = cv.width / N;
+  if (!terrain || terrain.seed !== sim.config.seed) { terrain = buildTerrain(N, sim.config.seed); terrain.seed = sim.config.seed; }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(terrain, 0, 0, cv.width, cv.height);
+  for (const [rt, color] of [["hematite", "122,46,27"], ["ice", "191,230,242"]]) {
+    for (const [k, amt] of w.deposits[rt]) {
+      const x = Math.floor(k / 1000), y = k % 1000;
+      ctx.fillStyle = `rgba(${color},${Math.min(1, 0.35 + amt / 6000)})`;
+      ctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+  for (const c of sim.econ.active()) {
+    const [x, y] = c.site, cx = (x + .5) * cell, cy = (y + .5) * cell, r = cell * .75;
+    ctx.fillStyle = "#f2c14e"; ctx.strokeStyle = "#3a2418"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  const [bx, by] = w.depot;
+  ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#1b1b1b"; ctx.lineWidth = 2;
+  ctx.fillRect((bx - 1) * cell, (by - 1) * cell, cell * 3, cell * 3); ctx.strokeRect((bx - 1) * cell, (by - 1) * cell, cell * 3, cell * 3);
+  ctx.fillStyle = "#1b1b1b"; ctx.font = `600 ${Math.round(cell * 1.3)}px "Barlow Condensed", sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(w.n_fabs ? `F${w.n_fabs}` : "B", (bx + .5) * cell, (by + .55) * cell);
+  const occ = new Map();
+  for (const r of sim.robots) {
+    if (!r.alive) continue;
+    const k = r.pos[0] * 1000 + r.pos[1], n = occ.get(k) || 0; occ.set(k, n + 1);
+    if (n > 3) continue;
+    const ox = (n % 2) * cell * .5, oy = Math.floor(n / 2) * cell * .5;
+    ctx.fillStyle = ROLE_COLOR[r.role] || "#fff";
+    ctx.beginPath(); ctx.arc(r.pos[0] * cell + cell * .27 + ox, r.pos[1] * cell + cell * .27 + oy, cell * .26, 0, Math.PI * 2); ctx.fill();
+  }
+  const sun = w.solarFactor(sim.t) / Math.PI;
+  const night = Math.max(0, 0.45 - sun * 0.6);
+  if (night > 0) { ctx.fillStyle = `rgba(8,14,30,${night})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+  if (w.storm(sim.t)) { ctx.fillStyle = "rgba(214,140,70,0.38)"; ctx.fillRect(0, 0, cv.width, cv.height); }
+  $("mapnote").textContent = `${w.storm(sim.t) ? "Dust storm · " : ""}${sun > 0.05 ? "Day" : "Night"} · ${fmtInt(sim.population)} robots`;
+}
+
+function chart(id, values, color, fmt) {
+  const cv = $(id), dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 240, H = 110;
+  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const css = getComputedStyle(document.documentElement);
+  const line = css.getPropertyValue("--line").trim(), muted = css.getPropertyValue("--muted").trim();
+  const pad = { l: 4, r: 4, t: 8, b: 16 }, iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const maxSol = sim.config.ticks / SOL_TICKS;
+  let lo = Math.min(0, ...values.map(v => v[1])), hi = Math.max(1, ...values.map(v => v[1]));
+  if (hi === lo) hi = lo + 1;
+  ctx.strokeStyle = line; ctx.lineWidth = 1;
+  for (let i = 0; i <= 2; i++) { const y = pad.t + ih * i / 2; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke(); }
+  ctx.fillStyle = muted; ctx.font = "10.5px 'IBM Plex Mono', monospace"; ctx.textBaseline = "top";
+  ctx.textAlign = "left"; ctx.fillText(fmt(hi), pad.l + 2, pad.t + 2);
+  ctx.textAlign = "left"; ctx.fillText("sol 0", pad.l, H - 12); ctx.textAlign = "right"; ctx.fillText(`${maxSol}`, W - pad.r, H - 12);
+  if (values.length < 2) return;
+  const X = s => pad.l + iw * s / maxSol, Y = v => pad.t + ih * (1 - (v - lo) / (hi - lo));
+  ctx.beginPath(); values.forEach(([s, v], i) => i ? ctx.lineTo(X(s), Y(v)) : ctx.moveTo(X(s), Y(v)));
+  ctx.lineTo(X(values[values.length - 1][0]), Y(Math.max(lo, 0))); ctx.lineTo(X(values[0][0]), Y(Math.max(lo, 0))); ctx.closePath();
+  ctx.globalAlpha = 0.14; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
+  ctx.beginPath(); values.forEach(([s, v], i) => i ? ctx.lineTo(X(s), Y(v)) : ctx.moveTo(X(s), Y(v)));
+  ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.stroke();
+  const [ls, lv] = values[values.length - 1];
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(ls), Y(lv), 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function renderKpis(s) {
+  const e = sim.econ, inConj = sim.inConjunction(sim.t);
+  const k = [
+    ["Robots", fmtInt(s.population)],
+    ["Cash", money(s.cash)],
+    ["Revenue", money(s.ledger.contract_revenue || 0)],
+    ["Chips in depot", fmtInt(s.chips_in_depot)],
+    ["Chips made", fmtInt(s.chips_made)],
+    ["Fabs", `${s.fabs}${s.fab_kits % 4 || (s.fab_kits / 4 > s.fabs) ? ` · ${s.fab_kits} kits` : ""}`],
+    ["Launch $/kg", fmtInt(e.launchCostPerKg(sim.t))],
+    ["Next window", `sol ${s.next_window_sol}`],
+  ];
+  $("kpis").innerHTML = k.map(([a, b]) => `<div class="kpi"><span>${a}</span><b>${b}</b></div>`).join("");
+  const pills = [];
+  if (sim.world.storm(sim.t)) pills.push(`<span class="pill warn">Dust storm</span>`);
+  if (inConj) pills.push(`<span class="pill bad">Comms blackout</span>`);
+  if (s.in_transit.length) pills.push(`<span class="pill">${s.in_transit.length} ship${s.in_transit.length > 1 ? "s" : ""} in transit</span>`);
+  if (sim.pending.length) pills.push(`<span class="pill warn">${sim.pending.length} command${sim.pending.length > 1 ? "s" : ""} queued</span>`);
+  const arm = ARM[armIdx]; if (arm) pills.push(`<span class="pill">${arm.controller} arm · ${arm.condition}${arm.delay_s ? ` · ${arm.delay_s}s` : ""}</span>`);
+  $("status").innerHTML = pills.join("");
+}
+
+function renderDesk() {
+  if (!sim) return;
+  const p = sim.policy;
+  if (mode !== "you" || !document.activeElement || !document.activeElement.id.startsWith("p_")) {
+    $("p_replicate").checked = !!p.replicate; $("p_build_fab").checked = !!p.build_fab;
+    $("p_target_fabs").value = p.target_fabs ?? 1; $("p_fab_share").value = p.fab_share ?? 0.5;
+    $("p_contract_share").value = p.contract_share || 0; $("p_chip_reserve").value = p.chip_reserve || 0;
+  }
+  $("v_target_fabs").textContent = $("p_target_fabs").value;
+  $("v_fab_share").textContent = `${Math.round($("p_fab_share").value * 100)}%`;
+  $("v_contract_share").textContent = `${Math.round($("p_contract_share").value * 100)}%`;
+  $("v_chip_reserve").textContent = $("p_chip_reserve").value;
+  // orders
+  const t = sim.t, e = sim.econ;
+  ORDER_ITEMS.forEach(item => {
+    const cell = document.getElementById(`lc_${item}`);
+    if (cell) cell.textContent = money(e.landedCost(item, t));
+  });
+  updateOrderTotal();
+  const nw = Math.floor(e.nextWindow(t) / SOL_TICKS);
+  $("windowNote").textContent = t === 0 ? "Before sol 0: orders land with the first landing" :
+    `Next launch window sol ${nw}, lands sol ${nw + e.cfg.transit_sols}`;
+  const man = Object.keys(e.manifest).length ? describe(e.manifest) : "empty";
+  const transit = e.in_transit.map(s => `${describe(s.items)} (lands sol ${Math.floor(s.arrives / SOL_TICKS)})`).join("; ");
+  $("manifestNote").textContent = `Manifest: ${man}.${transit ? ` In transit: ${transit}.` : ""}`;
+  renderContracts();
+}
+function orderQty() { const o = {}; ORDER_ITEMS.forEach(i => { const v = Math.max(0, Math.floor(+$(`q_${i}`).value || 0)); if (v) o[i] = v; }); return o; }
+function updateOrderTotal() {
+  const o = orderQty(), cost = Object.keys(o).length ? sim.econ.manifestCost(o, sim.t) : 0;
+  $("orderTotal").textContent = cost ? `This order: ${money(cost)} incl. $10M per shipment · cash ${money(sim.econ.cash)}` : `Cash ${money(sim.econ.cash)}`;
+}
+function renderContracts() {
+  const e = sim.econ, t = sim.t, you = mode === "you";
+  const card = (c, active) => {
+    const rem = e.remaining(c), req = c.requirements;
+    const total = Object.values(req).reduce((a, b) => a + b, 0), left = Object.values(rem).reduce((a, b) => a + b, 0);
+    const solsLeft = Math.floor((c.deadline - t) / SOL_TICKS);
+    const needs = Object.entries(req).map(([k, q]) => `${q} ${label(k)}`).join(", ");
+    return `<div class="contract ${active && solsLeft < 40 ? "late" : ""}">
+      <div><div class="what">${label(c.kind)} <span class="num" style="font-weight:500">${money(c.payment)}</span></div>
+      <div class="meta">${c.client} · ${needs} · ${active ? `${solsLeft} sols left` : `deadline in ${solsLeft} sols`}</div></div>
+      ${active ? `<span class="num note">${Math.round(100 * (total - left) / total)}%</span>` :
+        `<button data-accept="${c.id}" ${you ? "" : "disabled"}>Accept</button>`}
+      ${active ? `<div class="progress"><div style="width:${100 * (total - left) / total}%"></div></div>` : ""}
+    </div>`;
+  };
+  const act = e.active(), off = e.offers().slice(-8).reverse();
+  $("contracts").innerHTML = (act.length ? act.map(c => card(c, true)).join("") : `<p class="note">No active contracts.</p>`) +
+    (off.length ? `<p class="note" style="margin-top:4px">Offers (expire after 30 sols)</p>` + off.map(c => card(c, false)).join("") : "");
+}
+function renderLog() {
+  const box = $("log"), evs = sim.events;
+  if (evs.length === lastLog) return;
+  const frag = evs.slice(lastLog).map(ev => `<div class="k-${ev.kind}"><span class="sol">sol ${ev.sol}</span><span>${ev.text}</span></div>`).join("");
+  lastLog = evs.length;
+  box.insertAdjacentHTML("afterbegin", frag.split("</div>").filter(Boolean).reverse().map(x => x + "</div>").join(""));
+  while (box.children.length > 120) box.lastChild.remove();
+}
+let frame = 0;
+function render(force) {
+  const s = sim.snapshot();
+  $("sol").textContent = s.sol;
+  drawMap();
+  if (force || frame++ % 3 === 0) {
+    renderKpis(s); renderDesk(); renderLog();
+    const h = sim.history.concat([{ sol: s.sol, population: s.population, cash: s.cash, chips_made: s.chips_made, fabs: s.fabs }]);
+    const css = getComputedStyle(document.documentElement);
+    chart("ch_pop", h.map(x => [x.sol, x.population]), css.getPropertyValue("--ochre").trim(), v => fmtInt(v));
+    chart("ch_cash", h.map(x => [x.sol, x.cash]), css.getPropertyValue("--accent").trim(), money);
+    chart("ch_chips", h.map(x => [x.sol, x.chips_made]), css.getPropertyValue("--good").trim(), v => fmtInt(v));
+    chart("ch_fabs", h.map(x => [x.sol, x.fabs]), css.getPropertyValue("--ink").trim(), v => fmtInt(v));
+    $("c_pop").textContent = fmtInt(s.population); $("c_cash").textContent = money(s.cash);
+    $("c_chips").textContent = fmtInt(s.chips_made); $("c_fabs").textContent = s.fabs;
+  }
+}
+
+// ---- wiring -------------------------------------------------------------------
+function buildOrderRows() {
+  $("orderRows").innerHTML = ORDER_ITEMS.map(i => `<tr><td>${label(i)}<div class="note">${ORDER_NOTES[i]}</div></td>
+    <td class="r num" id="lc_${i}"></td><td class="r"><input type="number" id="q_${i}" min="0" max="500" value="0" aria-label="${label(i)} quantity"></td></tr>`).join("");
+  ORDER_ITEMS.forEach(i => $(`q_${i}`).addEventListener("input", updateOrderTotal));
+}
+function buildArmRows() {
+  $("armRows").innerHTML = ARM.map((a, i) => {
+    const asm = Math.pow(a.success, 4), cls = asm < 0.5 ? "bad-t" : asm < 0.85 ? "warn-t" : "good-t";
+    const ctrl = a.controller === "teleop" ? `teleop from ${a.delay_s ? a.delay_s + " s away" : "next door"}` : a.controller;
+    return `<tr data-arm="${i}" class="${i === armIdx ? "sel" : ""}" tabindex="0"><td>${ctrl}</td><td>${a.condition}</td>
+      <td class="r num">${Math.round(a.success * 100)}%</td><td class="r num">${a.time_multiplier.toFixed(1)}</td>
+      <td class="r num ${cls}">${Math.round(asm * 100)}%</td></tr>`;
+  }).join("");
+}
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+$("play").addEventListener("click", () => setRunning(!running));
+$("stepSol").addEventListener("click", () => { if (!ended) { advance(1); render(true); } });
+$("restart").addEventListener("click", () => newSim());
+$("armRows").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-arm]"); if (!tr) return;
+  armIdx = +tr.dataset.arm; storage("vn.arm", String(armIdx)); buildArmRows(); render(true);
+  $("restart").textContent = "Restart with this arm";
+});
+$("armRows").addEventListener("keydown", e => { if (e.key === "Enter") e.target.click(); });
+const policyInputs = ["p_replicate", "p_build_fab", "p_target_fabs", "p_fab_share", "p_contract_share", "p_chip_reserve"];
+policyInputs.forEach(id => $(id).addEventListener("change", () => {
+  if (mode !== "you") return;
+  sim.command({ replicate: $("p_replicate").checked, build_fab: $("p_build_fab").checked,
+    target_fabs: +$("p_target_fabs").value, fab_share: +$("p_fab_share").value,
+    contract_share: +$("p_contract_share").value, chip_reserve: +$("p_chip_reserve").value });
+  render(true);
+}));
+policyInputs.forEach(id => $(id).addEventListener("input", () => renderDesk()));
+$("placeOrder").addEventListener("click", () => {
+  const o = orderQty(); if (!Object.keys(o).length) return;
+  sim.command({ orders: o });
+  sim.log("comms", `Ordered ${describe(o)}${sim.t === 0 ? " for the first landing" : ` for the sol ${Math.floor(sim.econ.nextWindow(sim.t) / SOL_TICKS)} window`}`);
+  ORDER_ITEMS.forEach(i => $(`q_${i}`).value = 0);
+  render(true);
+});
+$("contracts").addEventListener("click", e => {
+  const b = e.target.closest("button[data-accept]"); if (!b || mode !== "you") return;
+  sim.command({ accept_contracts: [+b.dataset.accept] });
+  render(true);
+});
+window.addEventListener("resize", () => sim && render(true));
+
+const savedArm = +storage("vn.arm"); if (savedArm >= 0 && savedArm < ARM.length) armIdx = savedArm;
+const savedMode = storage("vn.mode");
+buildOrderRows(); buildArmRows();
+mode = ["you", "auto", "import", "fab"].includes(savedMode) ? savedMode : "auto";
+newSim(); setMode(mode);
+// Open on a working colony when a strategy is in charge; as director you start at sol 0 to plan the first landing.
+if (mode !== "you") { advance(120); render(true); }
+})();
+</script>
