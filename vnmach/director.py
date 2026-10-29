@@ -123,7 +123,7 @@ class HeuristicDirector:
                 orders["chip"] = short
 
         # Contracts: take what the fleet can plausibly deliver.
-        capacity = max(1, pop // 8) - len(e["active_contracts"])
+        capacity = max(1, pop // 5) - len(e["active_contracts"])
         accept = [c["id"] for c in sorted(e["contract_offers"], key=lambda c: -c["payment_musd"])
                   if c["sols_left"] >= 120][:max(0, capacity)]
 

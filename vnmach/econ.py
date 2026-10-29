@@ -72,8 +72,8 @@ class EconConfig:
     transit_sols: int = 200
     ops_cost_per_sol: float = 50_000  # mission control on Earth
     mars_price_ratio: float = 0.5  # contract price vs shipping the same goods from Earth
-    contract_offer_every_sols: int = 40
-    demand_growth_per_window: float = 2.0  # extra offers per period, per synodic period elapsed
+    contract_offer_every_sols: int = 20
+    demand_growth_per_window: float = 4.0  # extra offers per period, per synodic period elapsed
     catalog: dict[str, CatalogItem] = field(default_factory=default_catalog)
 
     @property
@@ -210,7 +210,7 @@ class Economy:
         if t % (self.cfg.contract_offer_every_sols * SOL_TICKS) != 0:
             return []
         windows = t / self.cfg.window_ticks
-        n = 1 + int(self.rng.random() + windows * self.cfg.demand_growth_per_window)
+        n = 2 + int(self.rng.random() + windows * self.cfg.demand_growth_per_window)
         return [self.offer(t) for _ in range(n)]
 
     def offer(self, t: int) -> Contract:
