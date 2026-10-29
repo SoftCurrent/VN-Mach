@@ -25,7 +25,10 @@ def render_map(sim) -> str:
     for r in sim.alive:
         x, y = r.pos
         grid[y][x] = "R" if sim.can_replicate(r) else "w"
+    for c in sim.econ.active_contracts():
+        x, y = c.site
+        grid[y][x] = "C"
     x, y = w.depot
     grid[y][x] = "B"
-    legend = "B=base/fab  R=replicator  w=worker  h=hematite  i=ice  .=basalt regolith"
+    legend = "B=base/fabs  R=replicator  w=worker  C=contract site  h=hematite  i=ice  .=basalt regolith"
     return "\n".join("".join(row) for row in grid) + "\n" + legend

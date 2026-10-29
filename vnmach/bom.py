@@ -53,6 +53,15 @@ FAB_KITS_REQUIRED = 4
 
 CHIP_RECIPE = Recipe("chip", {"silicon": 4, "aluminium": 1}, 30, 40, "fabricate", 0.9, mass=0.2, at_fab=True)
 
+# A fab is FAB_KITS_REQUIRED kits plus one set of tooling. Tooling is either
+# imported from Earth or, once a fab exists, made in that fab: the step that
+# lets factories, not just robots, replicate.
+TOOLING_RECIPE = Recipe(
+    "fab_tooling",
+    {"steel": 12, "aluminium": 8, "silicon": 10, "glass": 6, "sensor": 4, "motor": 4, "chip": 2},
+    40, 400, "fabricate", 0.7, mass=80.0, at_fab=True,
+)
+
 
 def default_recipes(chip_fab: bool = False) -> dict[str, Recipe]:
     r = [
@@ -63,6 +72,7 @@ def default_recipes(chip_fab: bool = False) -> dict[str, Recipe]:
         Recipe("glass", {"basalt": 1}, 3, 2, "refine"),
         Recipe("carbon", {"co2": 2}, 4, 3, "refine"),  # Sabatier / Bosch
         Recipe("polymer", {"carbon": 1, "ice": 1}, 4, 3, "refine"),
+        Recipe("propellant", {"co2": 2, "ice": 2}, 8, 4, "refine"),  # CH4/LOX via Sabatier + electrolysis
         # fabrication
         Recipe("frame", {"steel": 2, "aluminium": 2}, 4, 8, "fabricate", 0.1, mass=8.0),
         Recipe("motor", {"steel": 1, "aluminium": 1}, 3, 6, "fabricate", 0.4, mass=2.0),

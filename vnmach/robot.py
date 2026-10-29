@@ -62,6 +62,8 @@ class Robot:
     role: str = "replicator"  # "replicator" | "worker"
     born: int = 0
     work_done: int = 0  # raw units delivered to the stockpile
+    travel_to: Pos | None = None  # committed destination: walk without re-planning
+    sleep_until: int = -1  # blocked: don't re-plan before this tick
 
     @property
     def dud(self) -> bool:

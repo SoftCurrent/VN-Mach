@@ -1,4 +1,4 @@
-"""Martian surface: deposits, sols, dust storms, the base (depot + chip fab) and a shared stockpile."""
+"""Martian surface: deposits, sols, dust storms, the base (imports depot + chip fabs) and a shared stockpile."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from .bom import EVERYWHERE, FAB_KITS_REQUIRED, RAW
 
 Pos = tuple[int, int]
 
-SOL_TICKS = 40  # one Martian day
+SOL_TICKS = 10  # one Martian day (~2.5 h per tick)
 STORM_CHANCE = 1 / 3000  # per tick
 STORM_DURATION = (150, 600)
 STORM_SOLAR = 0.25  # fraction of sunlight reaching the panels in a storm
@@ -26,24 +26,22 @@ class World:
         rng: random.Random,
         size: int = 48,
         deposits_per_type: int = 12,
-        deposit_amount: int = 400,
-        seed_vitamins: int = 20,
-        vitamin_resupply_interval: int = 0,
-        vitamin_resupply_amount: int = 0,
+        deposit_amount: int = 2000,
+        seed_chips: int = 20,
         dust_storms: bool = True,
         fab_built: bool = False,
     ):
         self.rng = rng
         self.size = size
         self.depot: Pos = (size // 2, size // 2)
-        self.vitamins: Counter = Counter({"chip": seed_vitamins})
-        self.stockpile: Counter = Counter()
-        self.resupply_interval = vitamin_resupply_interval
-        self.resupply_amount = vitamin_resupply_amount
+        self.imports: Counter = Counter({"chip": seed_chips})  # Earth-made items waiting at the base
+        self.stockpile: Counter = Counter()  # Mars feedstock delivered by worker robots
         self.dust_storms = dust_storms
         self.storm_until = -1
         self.fab_kits = FAB_KITS_REQUIRED if fab_built else 0
+        self.fab_tooling = 1 if fab_built else 0
         self.fab_busy: list[int] = []  # busy-until tick per fab
+        self.tooling_waiting_until = -1  # a robot is waiting to make fab tooling: chips yield
         self.sync_fabs()
         self.deposits: dict[str, dict[Pos, int]] = {r: {} for r in RAW if r not in EVERYWHERE}
         for r in self.deposits:
@@ -56,13 +54,29 @@ class World:
                     )
                     self.deposits[r][p] = self.deposits[r].get(p, 0) + deposit_amount
 
+    # ---- fabs ---------------------------------------------------------------
+
     @property
     def n_fabs(self) -> int:
-        return self.fab_kits // FAB_KITS_REQUIRED
+        return min(self.fab_kits // FAB_KITS_REQUIRED, self.fab_tooling)
 
     @property
     def fab_built(self) -> bool:
         return self.n_fabs > 0
+
+    @property
+    def fab_shells_ready(self) -> int:
+        """Fab structures built from kits that are still waiting for tooling."""
+        return self.fab_kits // FAB_KITS_REQUIRED - self.fab_tooling
+
+    def install_imported_tooling(self) -> int:
+        n = 0
+        while self.imports["fab_tooling"] > 0 and self.fab_shells_ready > 0:
+            self.imports["fab_tooling"] -= 1
+            self.fab_tooling += 1
+            n += 1
+        self.sync_fabs()
+        return n
 
     def sync_fabs(self) -> None:
         while len(self.fab_busy) < self.n_fabs:
@@ -74,13 +88,15 @@ class World:
                 return i
         return None
 
+    # ---- environment --------------------------------------------------------
+
     def storm(self, t: int) -> bool:
         return t < self.storm_until
 
     def solar_factor(self, t: int) -> float:
-        """0..~1.6 insolation over a sol, mean ~1.0 in clear weather."""
+        """0..~3.1 insolation over a sol, mean 1.0 in clear weather."""
         phase = (t % SOL_TICKS) / SOL_TICKS
-        sun = max(0.0, math.sin(2 * math.pi * phase)) * math.pi  # mean over a sol = 1.0
+        sun = max(0.0, math.sin(2 * math.pi * phase)) * math.pi
         return sun * (STORM_SOLAR if self.storm(t) else 1.0)
 
     def nearest_deposit(self, pos: Pos, rtype: str) -> Pos | None:
@@ -108,7 +124,5 @@ class World:
         return {r: sum(c.values()) for r, c in self.deposits.items()}
 
     def tick(self, t: int) -> None:
-        if self.resupply_interval and t > 0 and t % self.resupply_interval == 0:
-            self.vitamins["chip"] += self.resupply_amount
         if self.dust_storms and not self.storm(t) and self.rng.random() < STORM_CHANCE:
             self.storm_until = t + self.rng.randint(*STORM_DURATION)
