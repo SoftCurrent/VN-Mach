@@ -251,8 +251,8 @@ def load_weights(path: str = DEFAULT_WEIGHTS) -> np.ndarray:
 
 
 # Training distribution: the conditions a Mars assembly robot will meet.
-TRAIN_RANGES = {"tolerance_mm": (0.1, 0.6), "noise_mm": (0.0, 3.5), "degradation": (0.2, 1.0)}
-TRAIN_TIME_LIMIT = 20.0
+TRAIN_RANGES = {"tolerance_mm": (0.1, 0.6), "noise_mm": (0.0, 3.0), "degradation": (0.25, 1.0)}
+TRAIN_TIME_LIMIT = 15.0
 
 
 def episode_score(info) -> float:
@@ -484,8 +484,8 @@ class TeleopController:
         depth = SOCKET_TOP - tip[2]
         exy = hole[:2] - tip[:2]
         last = self.last_goal if self.last_goal is not None else tip
-        if depth > 0.002:
-            goal = np.array([tip[0], tip[1], tip[2] - 0.003])  # in: push 3 mm at a time
+        if depth > 0.0005:
+            goal = np.array([tip[0], tip[1], tip[2] - 0.003])  # going in: push 3 mm at a time
         elif f[2] > 1.5:
             # Resting on the rim: correct by the error seen (the arm deflects under load),
             # plus the next spot of a small search pattern.
