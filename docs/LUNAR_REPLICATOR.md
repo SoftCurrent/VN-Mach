@@ -163,9 +163,13 @@ Rough throughput for one set of stations *(est.)*:
 | Casting, drawing, winding, lapping | ~25 kg of parts/day | ~12 days, overlaps with MRE |
 | Assembly and test | — | ~5 days |
 
-**Doubling time ≈ 35–45 days per set of stations**, if the robots also
-build more MRE cells (each needing an imported anode). Without that, the
-fixed MRE output makes growth linear.
+**Estimated doubling time ≈ 35–45 days per set of stations**, if the robots
+also build more MRE cells (each needing an imported anode). Without that,
+the fixed MRE output makes growth linear.
+
+> **The simulator disagrees (see section 8):** about 180 days per doubling.
+> One robot needs ~55 days of serial work to build a copy, and the
+> estimate above ignored that labour.
 
 ## 5. What to import, and when
 
@@ -204,6 +208,51 @@ anything above.
    polymers, sunlight at 80–90% instead of dust storms, a 1.3 s delay and
    supervisory control. Then check the doubling time and closure numbers
    above against the model.
+
+## 8. What the simulator says (`--body moon`)
+
+The Moon profile in `vnmach/body.py` encodes this design: 12 regolith-made
+part types plus one imported avionics module, MRE cells (3 kits + an
+imported anode), polar sunlight with ~15% shadow per lunar cycle, a dust
+failure rate of 1 per 3,000 ticks, 30-day flights and 5-day transit.
+
+```
+python -m vnmach closure --body moon
+python -m vnmach compare --body moon --directors none,import,auto --seeds 3
+```
+
+**Closure:** 97.0% by mass. The only import per robot is the avionics
+module. Each robot needs 412 units (~2.5 t) of regolith, 730 energy units,
+and 549 ticks of serial work: **about 55 days for one robot alone.**
+
+**Strategies** (2000 days, 3 seeds, $20,000/kg falling 3% per flight):
+
+| Strategy | Robots | MRE cells | Cash | Doubling time |
+|---|---|---|---|---|
+| None (no Earth orders) | 13 | 1 | $137M | — |
+| Keep one MRE cell | 62 | 1 | $2.57B | 346 days |
+| Add a cell per 6 robots | 151 | 28 | $4.07B | **184 days** |
+
+**Why 184 days, not 35–45:**
+- **Robot labour is the bottleneck, not MRE output.** Adding cells faster
+  (one per 2 or 3 robots) didn't help: doubling stayed at 176–210 days,
+  because building cells takes robot time too.
+- **Where one robot's 55 days go:**
+  - MRE runs: 28%
+  - Lapping 8 reducers: 20%
+  - Magnetic iron separation: 17%
+  - Winding 8 motors: 15%
+- **Turning off contracts and wear** only gets doubling down to ~140–155
+  days.
+
+**Biggest lever for faster replication:** fewer motor/reducer pairs per
+robot (currently 8 each), or batch processes like casting several parts
+at once. Not more stations.
+
+**Launch-cost sweep** (2 seeds): growing MRE cells beats keeping one by
+~57% at every price from $1M/kg down to $5,000/kg. Revenue is pegged to
+launch cost, so absolute cash swings by ~200× across that range; treat
+the ratio, not the dollars, as the result.
 
 ## Prior work worth reading
 

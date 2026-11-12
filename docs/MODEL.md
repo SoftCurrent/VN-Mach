@@ -3,9 +3,33 @@
 Every formula and number the simulator uses, with the file and name to
 edit. All values are assumptions unless marked *measured*.
 
+**Mars vs Moon.** Everything that differs between bodies lives in
+`vnmach/body.py` (`MARS`, `MOON`). The tables below describe Mars.
+
+Moon values:
+- **Feedstock:** regolith everywhere; ice only in craters ≥14 cells from base.
+- **Digging:** 30 units (180 kg) per dig action.
+- **Robot:** frame, 4 wheels, 8 motors, 8 reducers, arm, harness, avionics
+  module. About 300 kg at 6 kg per unit.
+- **MRE cell:** 3 kits + an imported anode. Recipes:
+  - fesi: 4 regolith → 1 + 2 oxygen
+  - aluminium: 5 regolith → 1 + 2 oxygen
+  - oxygen: 3 regolith → 2
+- **Iron:** 12 regolith → 1 by magnetic separation, anywhere.
+- **Sunlight:** polar, dark for 15% of each 295-tick lunar cycle.
+- **Wear and comms:** mtbf 3,000 ticks; no conjunction.
+- **Logistics:** flights every 30 days, 5-day transit.
+- **Prices:** $20,000/kg falling 3% per flight to a $1,000 floor;
+  avionics $100k; anode $2M (50 kg); complete MRE cell $25M (2 t);
+  robot $3M.
+- **Money:** start with $300M; operations $30k per day.
+- **Contracts:** oxygen delivery, landing pad, shielding berm, ice delivery.
+
+In the browser UI, change the same values in `ui/engine.js`.
+
 The browser UI runs a JavaScript copy of the same model (`ui/engine.js`).
 If you change a number in the Python files, change it in `ui/engine.js`
-too, then run `python ui/build.py`.
+too (the `MARS` and `MOON` objects), then run `python ui/build.py`.
 
 ## 1. Time and units
 

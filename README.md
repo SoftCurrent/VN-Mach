@@ -1,6 +1,6 @@
 # VN-Mach
 
-A simulator for a self-replicating robot business on Mars. Robots mine
+A simulator for a self-replicating robot business on Mars or the Moon. Robots mine
 Martian feedstock, refine it, fabricate parts, assemble copies of
 themselves, repair themselves, bootstrap and replicate their own chip fabs,
 and sell what they make to other Mars operators. Every part, launch and
@@ -11,7 +11,7 @@ what the manipulation underneath can actually do.
 ```
 pip install -e '.[dev]'          # add ,claude for the Claude director; mujoco for the arm
 python -m vnmach closure         # how self-sufficient is the robot design?
-python -m vnmach run --map       # one colony, 'auto' director
+python -m vnmach run --map       # one colony, 'auto' director (add --body moon for the Moon)
 python -m vnmach compare         # none / import / fab / auto over seeds
 python -m vnmach econ            # launch-cost sweep: ship chips vs build fabs
 python -m vnmach run --director claude --ticks 4000   # needs Anthropic API credentials
@@ -103,6 +103,33 @@ What this says:
    fleet at ~100% efficiency** (vs ~55% without), and **replication governors
    must be protected from copy errors**.
 
+## Moon mode
+
+`--body moon` swaps in the lunar design from `docs/LUNAR_REPLICATOR.md`:
+- **Robot:** ~300 kg, made from regolith plus one imported avionics module.
+- **Bottleneck station:** an MRE cell that turns regolith into metal and
+  oxygen, instead of a chip fab.
+- **Environment:** polar sunlight, no dust storms, faster dust wear,
+  flights every 30 days.
+
+Every body-specific number lives in `vnmach/body.py`; Mars runs are
+bit-for-bit identical to before the split.
+
+```
+python -m vnmach closure --body moon
+python -m vnmach compare --body moon --directors none,import,auto
+python -m vnmach econ --body moon --directors import,auto
+```
+
+| Moon, 2000 days | Robots | MRE cells | Cash | Doubling time |
+|---|---|---|---|---|
+| Keep one MRE cell | 62 | 1 | $2.57B | 346 days |
+| Add a cell per 6 robots | 151 | 28 | $4.07B | 184 days |
+
+The colony doubles about every 6 months. Robot labour limits it: ~55 days
+of serial work per copy. Metal supply isn't the limit. See the lunar
+design doc for the breakdown.
+
 ## Manipulation: what the AI controlling the arm can do
 
 `python -m vnmach.arm bench` runs a 4-DoF arm seating a part in a socket
@@ -137,13 +164,14 @@ So:
 
 ## Play with it
 
-`ui/vn-mach-control.html` is a self-contained page with live map, charts
-and log. You can be the director yourself (policy sliders, Earth orders
+`ui/vn-mach-control.html` is a self-contained page with a live map,
+charts and a log, for Mars or the Moon. You can be the director yourself (policy sliders, Earth orders
 with landed-cost previews, contract board, conjunction blackouts) or hand
 control to `auto` / `import` / `fab`. Pick an arm-control row to see how
 manipulation skill changes the colony. It runs `ui/engine.js`, a
-JavaScript port of the Python model; run `python ui/build.py` after
-editing either file.
+JavaScript port of the Python model (including both body profiles). Run
+`python ui/build.py` after editing `ui/engine.js`, `ui/app.js` or
+`ui/app.html`.
 
 Whether Claude can beat these rules is what `compare --directors
 auto,fab,claude` is for (needs Anthropic API credentials).
