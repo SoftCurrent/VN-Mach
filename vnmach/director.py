@@ -182,7 +182,8 @@ class HeuristicDirector:
 
         horizon_ticks = (e["window_period_sols"] + e["transit_sols"]) * SOL_TICKS
         replacements = self.target_population * self.fatal_share / snap["mtbf"] * horizon_ticks
-        growth = max(0, self.target_population - pop)
+        # The fleet can at most double before the next shipment lands, so don't stock up for the whole mission.
+        growth = min(max(0, self.target_population - pop), max(3, pop))
         kits_needed = max(0, target_fabs * self.kits_required - snap["fab_kits"])
         need = growth + int(replacements) + 1 + kits_needed * self.kit_vitamins
         short = need - self.chips_pipeline(snap)
