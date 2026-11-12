@@ -30,7 +30,8 @@ class Recipe:
     kind: str  # "refine" | "fabricate"
     precision: float = 0.0  # 0..1; higher precision -> more defect-prone
     mass: float = 1.0
-    at_fab: bool = False  # only possible inside the chip fab at the base
+    at_fab: bool = False  # only possible inside a station at the base (chip fab on Mars, MRE cell on the Moon)
+    byproducts: dict[str, int] = field(default_factory=dict)  # extra outputs, e.g. oxygen from electrolysis
 
 
 ROBOT_BOM: dict[str, int] = {
@@ -102,10 +103,11 @@ class Expansion:
     ticks: int = 0
 
 
-def expand(item: str, qty: int, recipes: dict[str, Recipe], acc: Expansion | None = None) -> Expansion:
+def expand(item: str, qty: int, recipes: dict[str, Recipe], acc: Expansion | None = None,
+           raw: tuple[str, ...] = RAW) -> Expansion:
     """Recursively expand an item into raw materials, vitamins, energy and serial build time."""
     acc = acc or Expansion()
-    if item in RAW:
+    if item in raw:
         acc.raw[item] += qty
         return acc
     rec = recipes.get(item)
@@ -115,14 +117,15 @@ def expand(item: str, qty: int, recipes: dict[str, Recipe], acc: Expansion | Non
     acc.energy += rec.energy * qty
     acc.ticks += rec.ticks * qty
     for inp, q in rec.inputs.items():
-        expand(inp, q * qty, recipes, acc)
+        expand(inp, q * qty, recipes, acc, raw)
     return acc
 
 
-def expand_bom(bom: dict[str, int], recipes: dict[str, Recipe], energy=0.0, ticks=0) -> Expansion:
+def expand_bom(bom: dict[str, int], recipes: dict[str, Recipe], energy=0.0, ticks=0,
+               raw: tuple[str, ...] = RAW) -> Expansion:
     acc = Expansion(energy=energy, ticks=ticks)
     for part, q in bom.items():
-        expand(part, q, recipes, acc)
+        expand(part, q, recipes, acc, raw)
     return acc
 
 
@@ -141,20 +144,22 @@ class ClosureReport:
     defect_free_probability: float
 
 
-def part_mass(item: str, recipes: dict[str, Recipe]) -> float:
+def part_mass(item: str, recipes: dict[str, Recipe], vitamin_mass: dict[str, float] = VITAMIN_MASS) -> float:
     if item in recipes:
         return recipes[item].mass
-    return VITAMIN_MASS.get(item, 1.0)
+    return vitamin_mass.get(item, 1.0)
 
 
-def closure(recipes: dict[str, Recipe], defect_rate: float = 0.02) -> ClosureReport:
-    total_parts = sum(ROBOT_BOM.values())
-    local_parts = sum(q for p, q in ROBOT_BOM.items() if p in recipes)
-    total_mass = sum(part_mass(p, recipes) * q for p, q in ROBOT_BOM.items())
-    local_mass = sum(part_mass(p, recipes) * q for p, q in ROBOT_BOM.items() if p in recipes)
-    exp = expand_robot(recipes)
+def closure(recipes: dict[str, Recipe], defect_rate: float = 0.02, robot_bom: dict[str, int] = ROBOT_BOM,
+            raw: tuple[str, ...] = RAW, vitamin_mass: dict[str, float] = VITAMIN_MASS,
+            assembly: tuple[float, int] = (ASSEMBLY_ENERGY, ASSEMBLY_TICKS)) -> ClosureReport:
+    total_parts = sum(robot_bom.values())
+    local_parts = sum(q for p, q in robot_bom.items() if p in recipes)
+    total_mass = sum(part_mass(p, recipes, vitamin_mass) * q for p, q in robot_bom.items())
+    local_mass = sum(part_mass(p, recipes, vitamin_mass) * q for p, q in robot_bom.items() if p in recipes)
+    exp = expand_bom(robot_bom, recipes, assembly[0], assembly[1], raw)
     p_ok = 1.0
-    for p, q in ROBOT_BOM.items():
+    for p, q in robot_bom.items():
         if p in recipes:
             p_ok *= (1 - defect_probability(recipes[p], defect_rate)) ** q
     return ClosureReport(

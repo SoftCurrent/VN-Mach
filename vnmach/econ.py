@@ -22,10 +22,10 @@ import random
 from collections import Counter
 from dataclasses import dataclass, field
 
-from .bom import ROBOT_BOM, default_recipes
+from .body import BODIES, MARS, Body
 from .world import SOL_TICKS
 
-KG_PER_UNIT = 100.0  # one inventory unit of material weighs ~100 kg; a robot is ~2.5 t (construction-class)
+KG_PER_UNIT = MARS.kg_per_unit  # Mars: one inventory unit weighs ~100 kg; a robot is ~2.5 t (construction-class)
 
 
 @dataclass(frozen=True)
@@ -34,31 +34,33 @@ class CatalogItem:
     mass_kg: float
 
 
-def bom_mass_kg(item: str) -> float:
+def bom_mass_kg(item: str, body: Body = MARS) -> float:
     if item == "robot":
-        return sum(bom_mass_kg(p) * q for p, q in ROBOT_BOM.items())
-    rec = default_recipes(chip_fab=True).get(item)
-    return (rec.mass if rec else 1.0) * KG_PER_UNIT
+        return sum(bom_mass_kg(p, body) * q for p, q in body.robot_bom.items())
+    rec = body.all_recipes().get(item)
+    if rec:
+        mass = rec.mass
+    else:
+        mass = body.vitamin_mass if item == body.vitamin else 1.0
+    return mass * body.kg_per_unit
 
 
-EARTH_PRICES = {
-    "chip": 100_000,  # rad-tolerant compute + drivers + comms module
-    "motor": 20_000,
-    "sensor": 30_000,
-    "solar_panel": 15_000,
-    "battery": 25_000,
-    "wiring": 2_000,
-    "frame": 40_000,
-    "robot": 2_000_000,
-}
+EARTH_PRICES = MARS.earth_prices  # chip = rad-tolerant compute + drivers + comms module
+
+
+def catalog_for(body: Body) -> dict[str, CatalogItem]:
+    """Earth catalog: parts priced per body, masses from the robot design; special items (tooling, anodes,
+    complete stations) carry their own mass."""
+    cat = {k: CatalogItem(v, bom_mass_kg(k, body)) for k, v in body.earth_prices.items()}
+    for k, (price, mass) in body.special_items.items():
+        cat[k] = CatalogItem(price, mass)
+    return cat
 
 
 def default_catalog() -> dict[str, CatalogItem]:
-    cat = {k: CatalogItem(v, bom_mass_kg(k)) for k, v in EARTH_PRICES.items()}
-    # Imported half of a chip fab: deposition, lithography, etch, test. The
-    # other half (structure, motion stages) is built on Mars from fab kits.
-    cat["fab_tooling"] = CatalogItem(40_000_000, 8_000)
-    return cat
+    # Mars fab tooling is the imported half of a chip fab: deposition, lithography, etch, test.
+    # The other half (structure, motion stages) is built on Mars from fab kits.
+    return catalog_for(MARS)
 
 
 @dataclass
@@ -73,8 +75,20 @@ class EconConfig:
     ops_cost_per_sol: float = 50_000  # mission control on Earth
     mars_price_ratio: float = 0.5  # contract price vs shipping the same goods from Earth
     contract_offer_every_sols: int = 20
-    demand_growth_per_window: float = 4.0  # extra offers per period, per synodic period elapsed
+    demand_growth_per_window: float = 4.0  # extra offers per period, per launch window elapsed
     catalog: dict[str, CatalogItem] = field(default_factory=default_catalog)
+    body: str = "mars"
+    contract_types: dict = field(default_factory=lambda: dict(MARS.contract_types))
+
+    @classmethod
+    def for_body(cls, body: Body, **overrides) -> "EconConfig":
+        """The body's default economics, with any non-None overrides applied."""
+        kw = dict(body.econ_defaults)
+        kw.update({k: v for k, v in overrides.items() if v is not None})
+        return cls(catalog=catalog_for(body), body=body.name, contract_types=dict(body.contract_types), **kw)
+
+    def item_mass(self, item: str) -> float:
+        return item_mass_kg(item, self.catalog, BODIES[self.body])
 
     @property
     def window_ticks(self) -> int:
@@ -85,22 +99,15 @@ class EconConfig:
         return self.transit_sols * SOL_TICKS
 
 
-def item_mass_kg(item: str, catalog: dict[str, CatalogItem]) -> float:
+def item_mass_kg(item: str, catalog: dict[str, CatalogItem], body: Body = MARS) -> float:
     if item in catalog:
         return catalog[item].mass_kg
-    return bom_mass_kg(item)
+    return bom_mass_kg(item, body)
 
 
 # ---- contracts --------------------------------------------------------------
 
-CONTRACT_TYPES = {
-    # name: (client, requirements, deadline_sols)
-    "landing_pad": ("launch provider", {"glass": 60, "steel": 20}, 300),
-    "habitat_shell": ("space agency", {"steel": 30, "aluminium": 25, "glass": 15}, 400),
-    "propellant": ("return-flight operator", {"propellant": 120}, 250),
-    "solar_farm": ("research station", {"solar_panel": 20, "wiring": 15}, 350),
-    "ice_delivery": ("life-support contractor", {"ice": 200}, 150),
-}
+CONTRACT_TYPES = MARS.contract_types  # name: (client, requirements, deadline_sols)
 
 
 @dataclass
@@ -214,9 +221,10 @@ class Economy:
         return [self.offer(t) for _ in range(n)]
 
     def offer(self, t: int) -> Contract:
-        kind = self.rng.choice(sorted(CONTRACT_TYPES))
-        client, reqs, deadline_sols = CONTRACT_TYPES[kind]
-        mass = sum(item_mass_kg(i, self.cfg.catalog) * q for i, q in reqs.items())
+        types = self.cfg.contract_types
+        kind = self.rng.choice(sorted(types))
+        client, reqs, deadline_sols = types[kind]
+        mass = sum(self.cfg.item_mass(i) * q for i, q in reqs.items())
         payment = self.cfg.mars_price_ratio * mass * self.launch_cost_per_kg(t) * self.rng.uniform(0.8, 1.2)
         site = (self.rng.randrange(self.map_size), self.rng.randrange(self.map_size))
         c = Contract(self.next_contract_id, kind, client, dict(reqs), payment, t,
@@ -262,8 +270,9 @@ class Economy:
             "cash_musd": round(self.cash / 1e6, 2),
             "ledger_musd": {k: round(v / 1e6, 2) for k, v in self.ledger.items()},
             "launch_cost_per_kg": round(self.launch_cost_per_kg(t)),
-            "landed_cost_usd": {k: round(self.landed_cost(k, t)) for k in ("chip", "robot", "fab_tooling")},
+            "landed_cost_usd": {k: round(self.landed_cost(k, t)) for k in self.cfg.catalog},
             "next_window_sol": self.next_window(t) // SOL_TICKS,
+            "window_period_sols": self.cfg.window_period_sols,
             "transit_sols": self.cfg.transit_sols,
             "manifest": dict(self.manifest),
             "in_transit": [{"items": dict(s.items), "arrives_sol": s.arrives // SOL_TICKS} for s in self.in_transit],

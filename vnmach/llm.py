@@ -8,8 +8,8 @@ policy in place: the colony must never depend on the planner being reachable.
 
 Where the planner runs is a simulation setting (Config.director_location):
 "earth" means a big model in a datacenter, blacked out during solar
-conjunction and delayed by light time; "mars" means an onboard model (pass a
-smaller --model to stand in for edge hardware) that is always available.
+conjunction (Mars only) and delayed by light time; "onboard" means a model on
+site (pass a smaller --model to stand in for edge hardware) that is always available.
 """
 
 from __future__ import annotations
@@ -18,46 +18,75 @@ import json
 import sys
 from collections import Counter
 
-from .bom import CHIP_RECIPE, FAB_KIT, FAB_KITS_REQUIRED, ROBOT_BOM, TOOLING_RECIPE
-from .director import CATALOG_ITEMS, sanitize
+from .body import BODIES, Body
+from .director import sanitize
 from .econ import EconConfig
 
 DEFAULT_MODEL = "claude-opus-5-5"
+PLACE = {"mars": "Mars", "moon": "the Moon"}
+
+
+def _a(noun: str) -> str:
+    return f"an {noun}" if noun[0].lower() in "aeiou" or noun.startswith("MRE") else f"a {noun}"
+
+
+def _cap(text: str) -> str:
+    return text[0].upper() + text[1:]
+
+
+def _station_text(body: Body) -> str:
+    st, vit = body.station, body.label(body.vitamin)
+    kit = json.dumps(st.kit)
+    if st.makes_vitamin:
+        core = st.core_recipe
+        return f"""- Everything is made locally EXCEPT {vit}s, which come from Earth unless the colony has {_a(st.name)}.
+- {_cap(_a(st.name))} = {st.kits_required} kits built by robots ({kit} each) + 1 {body.label(st.core)}. The first
+  {body.label(st.core)} must be bought from Earth. Once one {st.name} works, it can make more
+  ({core.ticks} ticks each, needs {core.inputs.get(body.vitamin, 0)} {vit}s).
+  Each {st.name} makes one {vit} per {st.recipes[0].ticks} ticks. If imported {vit}s run out before the
+  first {st.name} exists, replication stops until the next shipment lands."""
+    outputs = ", ".join(f"{r.output} ({r.ticks} ticks, + {json.dumps(r.byproducts)})" for r in st.recipes)
+    return f"""- {vit.capitalize()}s can't be made locally at all: every robot and every station kit needs one from Earth.
+- Metal comes only from {st.name}s: {outputs}. Each {st.name} runs one job at a time, so they are
+  the bottleneck. {_cap(_a(st.name))} = {st.kits_required} kits built by robots ({kit} each) + 1 {body.label(st.core)},
+  which must be bought from Earth for every new {st.name}. The colony starts with one."""
 
 
 def system_prompt(econ: EconConfig) -> str:
-    return f"""You are the planning layer of a self-replicating robot colony on Mars, run as a business.
+    body = BODIES[econ.body]
+    day = body.day_name
+    fatal = sum(body.robot_bom.values()) / len(body.fatal_parts) * body.mtbf
+    weather = ("Dust storms cut solar power to 25% for 15-60 sols." if body.dust_storms else
+               "Sunlight is near-constant at the polar site, but ~15% of each 29.5-day lunar cycle is dark.")
+    comms = ("An Earth-hosted planner is blacked out for ~14 sols at each solar conjunction."
+             if body.conjunction_days else "Earth is always in contact (1.3 s light delay).")
+    return f"""You are the planning layer of a self-replicating robot colony on {PLACE[body.name]}, run as a business.
 Goal: maximise cash at the end of the run (contract revenue minus everything bought and
 launched from Earth), while keeping the colony alive and growing toward independence from Earth.
 
-How the colony works (10 ticks = 1 sol):
-- Robots mine Martian feedstock (hematite, basalt, ice, CO2), refine it, fabricate parts and
-  assemble copies of themselves. Robot bill of materials: {json.dumps(ROBOT_BOM)}.
-- Everything is made locally EXCEPT chips, which come from Earth unless the colony has chip fabs.
-- A chip fab = {FAB_KITS_REQUIRED} kits built by robots ({json.dumps(FAB_KIT)} each, so kits use chips)
-  + 1 set of fab tooling. The first tooling must be bought from Earth. Once one fab works, it can make
-  tooling for more fabs ({TOOLING_RECIPE.ticks} ticks each, needs {TOOLING_RECIPE.inputs['chip']} chips).
-  Each fab makes one chip per {CHIP_RECIPE.ticks} ticks. If imported chips run out before the first
-  fab exists, replication stops until the next shipment lands.
-- Robot components fail; losing the chip or frame kills a robot (~1 fatal failure per 22,000 robot-ticks).
-  Robots repair other failures themselves.
-- Dust storms cut solar power to 25% for 15-60 sols.
+How the colony works (10 ticks = 1 {day}):
+- Robots mine local feedstock ({", ".join(body.raw)}), refine it, fabricate parts and
+  assemble copies of themselves. Robot bill of materials: {json.dumps(body.robot_bom)}.
+{_station_text(body)}
+- Robot components fail; losing the {" or ".join(body.label(p) for p in body.fatal_parts)} kills a robot
+  (~1 fatal failure per {fatal:,.0f} robot-ticks). Robots repair other failures themselves.
+- {weather} {comms}
 
 Earth supply chain:
-- Anything in the catalog can be ordered: {', '.join(CATALOG_ITEMS)}. Orders fly only at launch windows
-  every {econ.window_period_sols} sols and arrive {econ.transit_sols} sols later. Orders you place at
+- Anything in the catalog can be ordered: {", ".join(econ.catalog)}. Orders fly only at launch windows
+  every {econ.window_period_sols} {day}s and arrive {econ.transit_sols} {day}s later. Orders you place at
   tick 0 land immediately with the first landing.
 - Landed cost = Earth price + mass x launch cost per kg (falls each window). The state shows current
   landed costs. Each window with cargo also costs ${econ.shipment_fixed_cost / 1e6:.0f}M fixed.
-- Mission control costs ${econ.ops_cost_per_sol / 1e3:.0f}k per sol.
+- Mission control costs ${econ.ops_cost_per_sol / 1e3:.0f}k per {day}.
 
 Revenue:
-- Other Mars operators offer contracts (deliver goods to a site before a deadline). Payment is pegged
+- Other operators offer contracts (deliver goods to a site before a deadline). Payment is pegged
   to what shipping the goods from Earth would cost them, so it falls as launch gets cheaper.
-  Failing an accepted contract costs a 10% penalty. Offers expire after 30 sols.
+  Failing an accepted contract costs a 10% penalty. Offers expire after 30 {day}s.
 - Robots that can't replicate work on accepted contracts; contract_share diverts replicators too.
 
-You control:
+You control ("fab" below means the {body.station.name}):
 - replicate, build_fab, target_fabs, fab_share, make_tooling, chip_reserve, contract_share, harvest_focus
 - orders: items to buy on the next launch window (use 0 for items you don't want)
 - accept_contracts: ids of offered contracts to take on
@@ -65,12 +94,18 @@ You control:
 Return the complete decision each time, with a short rationale."""
 
 
-ORDER_SCHEMA = {
-    "type": "object",
-    "properties": {k: {"type": "integer"} for k in CATALOG_ITEMS},
-    "required": list(CATALOG_ITEMS),
-    "additionalProperties": False,
-}
+def order_schema(items) -> dict:
+    return {
+        "type": "object",
+        "properties": {k: {"type": "integer"} for k in items},
+        "required": list(items),
+        "additionalProperties": False,
+    }
+
+
+def decision_schema(catalog_items) -> dict:
+    return {**DECISION_SCHEMA, "properties": {**DECISION_SCHEMA["properties"], "orders": order_schema(catalog_items)}}
+
 
 DECISION_SCHEMA = {
     "type": "object",
@@ -84,7 +119,7 @@ DECISION_SCHEMA = {
         "chip_reserve": {"type": "integer"},
         "contract_share": {"type": "number"},
         "harvest_focus": {"type": ["string", "null"], "enum": ["hematite", "basalt", "ice", "co2", None]},
-        "orders": ORDER_SCHEMA,
+        "orders": order_schema(EconConfig().catalog),
         "accept_contracts": {"type": "array", "items": {"type": "integer"}},
     },
     "required": ["rationale", "replicate", "build_fab", "target_fabs", "fab_share", "make_tooling",
@@ -105,7 +140,9 @@ class ClaudeDirector:
         self.total_ticks = total_ticks
         self.history_window = history_window
         self.verbose = verbose
-        self.system = system_prompt(econ or EconConfig())
+        econ = econ or EconConfig()
+        self.system = system_prompt(econ)
+        self.schema = decision_schema(econ.catalog)
         self.log: list[dict] = []  # past decisions fed back as memory
         self.usage: Counter = Counter()
 
@@ -133,7 +170,7 @@ class ClaudeDirector:
                 fallbacks="default",
                 system=self.system,
                 output_config={"effort": self.effort,
-                               "format": {"type": "json_schema", "schema": DECISION_SCHEMA}},
+                               "format": {"type": "json_schema", "schema": self.schema}},
                 messages=[{"role": "user", "content": self.prompt(snap)}],
             )
         except (a.RateLimitError, a.APIStatusError, a.APIConnectionError) as e:

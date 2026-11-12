@@ -6,7 +6,8 @@ import random
 from collections import Counter
 from dataclasses import dataclass, field
 
-from .bom import ASSEMBLY_ENERGY, ASSEMBLY_TICKS, FAB_KIT, RAW, ROBOT_BOM, default_recipes, defect_probability
+from .body import BODIES, Body
+from .bom import defect_probability
 from .controller import ScriptedController, step_toward
 from .econ import EconConfig, Economy
 from .robot import BATTERY_CAPACITY, CHILD_ENERGY, MINE_COST, MOVE_COST, Genome, Job, Robot
@@ -14,20 +15,19 @@ from .world import SOL_TICKS, World
 
 INSPECTION_DETECT_RATE = 0.9
 REPAIR_TICKS = 10
-FATAL_PARTS = ("chip", "frame")
 BLOCKED_SLEEP_TICKS = 3
 PROSPECT_FIND_CHANCE = 1 / 150  # per robot-tick spent surveying
-CONJUNCTION_SOLS = 14  # Sun between Earth and Mars: no comms
 
 
 @dataclass
 class Config:
+    body: str = "mars"  # "mars" or "moon": see vnmach/body.py
     seed: int = 0
-    ticks: int = 20000  # 2000 sols, ~2.5 synodic periods
+    ticks: int = 20000  # 2000 sols (or days), ~2.5 Mars synodic periods
     size: int = 48
     seed_robots: int = 3  # a single seed robot is a single point of failure
     seed_chips: int = 20
-    chip_fab: bool = False  # base starts with a working chip fab
+    chip_fab: bool | None = None  # first landing brings a working station (chip fab / MRE cell); None = body default
     dust_storms: bool = True
     defect_rate: float = 0.02
     mutation_rate: float = 0.0  # probability the child's genome differs from the parent's
@@ -35,7 +35,7 @@ class Config:
     max_children: int = 3
     max_generation: int | None = None
     max_population: int = 400
-    mtbf: float = 4000.0  # mean ticks between component failures per robot
+    mtbf: float | None = None  # mean ticks between component failures per robot; None = body default
     self_repair: bool = True  # robots fabricate and swap in replacements for broken parts
     # Manipulation skill, measured by the arm benchmark (vnmach.arm.skill_profile):
     skill_success: float = 1.0  # chance a fabricate/assemble manipulation succeeds
@@ -46,8 +46,8 @@ class Config:
     sample_every: int = 100
     director_interval: int = 250
     director_location: str = "mars"  # "earth": blacked out during solar conjunction, decisions arrive late
-    earth_latency_ticks: int = 1  # light time (4-24 min) + human/ops turnaround, in ticks
-    econ: EconConfig = field(default_factory=EconConfig)
+    earth_latency_ticks: int | None = None  # light time + human/ops turnaround, in ticks; None = body default
+    econ: EconConfig | None = None  # None = the body's default economics
 
 
 @dataclass
@@ -61,10 +61,18 @@ class Simulation:
 
     def __post_init__(self):
         c = self.config
+        self.body: Body = BODIES[c.body]
+        if c.mtbf is None:
+            c.mtbf = self.body.mtbf
+        if c.chip_fab is None:
+            c.chip_fab = self.body.station_prebuilt
+        if c.earth_latency_ticks is None:
+            c.earth_latency_ticks = self.body.earth_latency_ticks
+        if c.econ is None:
+            c.econ = EconConfig.for_body(self.body)
         self.rng = random.Random(c.seed)
-        self.recipes = default_recipes(chip_fab=False)  # chips become makeable once a fab exists
-        self.controller = ScriptedController(self.recipes)
-        self.world = World(self.rng, c.size, c.deposits_per_type, c.deposit_amount, c.seed_chips,
+        self.controller = ScriptedController(self.body)
+        self.world = World(self.rng, self.body, c.size, c.deposits_per_type, c.deposit_amount, c.seed_chips,
                            c.dust_storms, c.chip_fab)
         self.econ = Economy(c.econ, random.Random(c.seed + 10_000), c.size)
         self.robots = []
@@ -107,10 +115,12 @@ class Simulation:
     # ---- comms --------------------------------------------------------------
 
     def in_conjunction(self, t: int) -> bool:
-        """Solar conjunction falls roughly midway between launch windows."""
+        """Solar conjunction (Mars) falls roughly midway between launch windows; the Moon has none."""
+        if not self.body.conjunction_days:
+            return False
         w = self.econ.cfg.window_ticks
         mid = w // 2
-        return abs((t % w) - mid) <= CONJUNCTION_SOLS * SOL_TICKS // 2
+        return abs((t % w) - mid) <= self.body.conjunction_days * SOL_TICKS // 2
 
     def director_step(self) -> None:
         c = self.config
@@ -148,6 +158,11 @@ class Simulation:
                 for _ in range(q):
                     self.spawn(self.world.depot, Genome(max_children=self.config.max_children), 0, None)
                 self.stats["robots_imported"] += q
+            elif item == self.body.station_item:  # a complete station shipped from Earth
+                self.world.fab_kits += q * self.world.kits_required
+                self.world.fab_tooling += q
+                self.stats["stations_imported"] += q
+                self.after_fab_change()
             else:
                 self.world.imports[item] += q
                 self.stats[f"imported_{item}"] += q
@@ -158,7 +173,9 @@ class Simulation:
         e, t = self.econ, self.t
         if t == 0:
             # First landing: seed robots and chips, plus whatever the director put on the manifest.
-            first = Counter({"robot": self.config.seed_robots, "chip": self.config.seed_chips})
+            first = Counter({"robot": self.config.seed_robots, self.body.vitamin: self.config.seed_chips})
+            if self.config.chip_fab:
+                first[self.body.station_item] += 1  # the World was built with it already in place
             extra = Counter(e.manifest)
             e.manifest.clear()
             first.update(extra)
@@ -240,7 +257,7 @@ class Simulation:
         elif kind == "mine":
             if r.energy >= MINE_COST:
                 r.energy -= MINE_COST
-                r.inventory[action[1]] += w.mine(r.pos, action[1])
+                r.inventory[action[1]] += w.mine(r.pos, action[1], self.body.mine_units_per_tick)
         elif kind == "take_stock":
             got = min(action[2], w.stockpile[action[1]])
             w.stockpile[action[1]] -= got
@@ -262,7 +279,7 @@ class Simulation:
                     w.prospect(action[1], self.config.deposit_amount)
                     self.stats[f"veins_found_{action[1]}"] += 1
         elif kind == "deliver":
-            for raw in RAW:
+            for raw in self.body.raw:
                 n = r.inventory[raw]
                 if n:
                     w.stockpile[raw] += n
@@ -281,15 +298,15 @@ class Simulation:
         elif kind == "deliver_kit":
             if w.n_fabs >= self.policy.get("target_fabs", 1):
                 return  # target already met; controller will retarget next tick
-            for item, q in FAB_KIT.items():
+            for item, q in self.body.station.kit.items():
                 r.take_parts(item, q, self.rng)
             w.fab_kits += 1
             self.stats["fab_kits"] += 1
             self.after_fab_change()
         elif kind == "deliver_tooling":
-            r.take_parts("fab_tooling", 1, self.rng)
+            r.take_parts(w.core, 1, self.rng)
             w.fab_tooling += 1
-            self.stats["tooling_made_on_mars"] += 1
+            self.stats["cores_made_locally"] += 1
             self.after_fab_change()
         elif kind == "start":
             rec = action[1]
@@ -304,13 +321,14 @@ class Simulation:
             bad = r.take_parts(part, 1, self.rng)
             r.job = Job("repair", part, REPAIR_TICKS, child_defects=Counter({part: bad}))
         elif kind == "assemble":
-            r.energy -= ASSEMBLY_ENERGY + CHILD_ENERGY
+            r.energy -= self.body.assembly_energy + CHILD_ENERGY
             defects = Counter()
-            for part, q in ROBOT_BOM.items():
+            for part, q in self.body.robot_bom.items():
                 bad = r.take_parts(part, q, self.rng)
                 if bad:
                     defects[part] += bad
-            r.job = Job("assemble", "robot", self.skill_ticks(ASSEMBLY_TICKS, "assemble"), child_defects=defects)
+            r.job = Job("assemble", "robot", self.skill_ticks(self.body.assembly_ticks, "assemble"),
+                        child_defects=defects)
 
     def skill_ticks(self, ticks: int, kind: str) -> int:
         if kind == "refine":  # process chemistry, not manipulation
@@ -334,10 +352,10 @@ class Simulation:
 
     def component_failure(self, r: Robot) -> None:
         """A random component wears out. Losing the chip or the frame is fatal; anything else degrades the robot."""
-        parts = [p for p, q in ROBOT_BOM.items() for _ in range(q)]
+        parts = [p for p, q in self.body.robot_bom.items() for _ in range(q)]
         part = self.rng.choice(parts)
         self.stats["component_failures"] += 1
-        if part in FATAL_PARTS:
+        if part in self.body.fatal_parts:
             r.alive = False
             self.stats["failures"] += 1
         else:
@@ -355,9 +373,9 @@ class Simulation:
         if job.kind == "assemble":
             if self.manipulation_failed(self.config.assembly_insertions):
                 # Botched assembly: one part is destroyed, the rest go back into inventory.
-                parts = [p for p, q in ROBOT_BOM.items() for _ in range(q)]
+                parts = [p for p, q in self.body.robot_bom.items() for _ in range(q)]
                 lost = self.rng.choice(parts)
-                for p, q in ROBOT_BOM.items():
+                for p, q in self.body.robot_bom.items():
                     r.inventory[p] += q - (1 if p == lost else 0)
                 return
             genome = r.genome
@@ -372,8 +390,14 @@ class Simulation:
             return
         if job.kind == "fabricate" and self.manipulation_failed():
             return  # part scrapped; inputs are lost
-        if job.output == "chip":
+        if job.output == self.body.vitamin:
             self.stats["chips_made"] += 1
+        if job.recipe.at_fab:
+            self.stats[f"made_{job.output}"] += 1
+            for item, q in job.recipe.byproducts.items():
+                self.stats[f"made_{item}"] += q
+        for item, q in job.recipe.byproducts.items():
+            r.inventory[item] += q
         if job.kind == "fabricate" and self.rng.random() < defect_probability(job.recipe, self.config.defect_rate):
             self.stats["defects_made"] += 1
             if r.can_inspect and self.rng.random() < INSPECTION_DETECT_RATE:
@@ -403,7 +427,10 @@ class Simulation:
             "duds": self.stats["duds"],
             "failures": self.stats["failures"],
             "repairs": self.stats["repairs"],
-            "chips_in_depot": w.imports["chip"],
+            "body": self.body.name,
+            "station": self.body.station.name,
+            "mtbf": self.config.mtbf,
+            "chips_in_depot": w.imports[self.body.vitamin],
             "imports_in_depot": {k: v for k, v in w.imports.items() if v},
             "chips_made": self.stats["chips_made"],
             "fabs": w.n_fabs,

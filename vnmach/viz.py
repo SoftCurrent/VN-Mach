@@ -30,5 +30,7 @@ def render_map(sim) -> str:
         grid[y][x] = "C"
     x, y = w.depot
     grid[y][x] = "B"
-    legend = "B=base/fabs  R=replicator  w=worker  C=contract site  h=hematite  i=ice  .=basalt regolith"
+    ground = ", ".join(sim.body.everywhere)
+    legend = (f"B=base/{sim.body.station.name}s  R=replicator  w=worker  C=contract site  "
+              f"h=hematite  i=ice  .={ground} (everywhere)")
     return "\n".join("".join(row) for row in grid) + "\n" + legend

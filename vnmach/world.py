@@ -1,19 +1,17 @@
-"""Martian surface: deposits, sols, dust storms, the base (imports depot + chip fabs) and a shared stockpile."""
+"""Planet surface: deposits, days, sunlight, dust storms, the base (imports depot + stations) and a shared stockpile."""
 
 from __future__ import annotations
 
-import math
 import random
 from collections import Counter
 
-from .bom import EVERYWHERE, FAB_KITS_REQUIRED, RAW
+from .body import MARS, Body
 
 Pos = tuple[int, int]
 
-SOL_TICKS = 10  # one Martian day (~2.5 h per tick)
+SOL_TICKS = 10  # one sol on Mars, one Earth day on the Moon (~2.4 h per tick)
 STORM_CHANCE = 1 / 3000  # per tick
 STORM_DURATION = (150, 600)
-STORM_SOLAR = 0.25  # fraction of sunlight reaching the panels in a storm
 
 
 def dist(a: Pos, b: Pos) -> int:
@@ -24,6 +22,7 @@ class World:
     def __init__(
         self,
         rng: random.Random,
+        body: Body = MARS,
         size: int = 48,
         deposits_per_type: int = 12,
         deposit_amount: int = 2000,
@@ -32,21 +31,27 @@ class World:
         fab_built: bool = False,
     ):
         self.rng = rng
+        self.body = body
         self.size = size
         self.depot: Pos = (size // 2, size // 2)
         self.imports: Counter = Counter({"chip": seed_chips})  # Earth-made items waiting at the base
         self.stockpile: Counter = Counter()  # Mars feedstock delivered by worker robots
-        self.dust_storms = dust_storms
+        self.dust_storms = dust_storms and body.dust_storms
         self.storm_until = -1
-        self.fab_kits = FAB_KITS_REQUIRED if fab_built else 0
+        self.kits_required = body.station.kits_required
+        self.core = body.station.core
+        self.fab_kits = self.kits_required if fab_built else 0
         self.fab_tooling = 1 if fab_built else 0
         self.fab_busy: list[int] = []  # busy-until tick per fab
         self.tooling_waiting_until = -1  # a robot is waiting to make fab tooling: chips yield
         self.sync_fabs()
-        self.deposits: dict[str, dict[Pos, int]] = {r: {} for r in RAW if r not in EVERYWHERE}
+        self.deposits: dict[str, dict[Pos, int]] = {r: {} for r in body.raw if r not in body.everywhere}
         for r in self.deposits:
+            min_dist = body.deposit_min_dist.get(r, 0)
             for _ in range(max(1, deposits_per_type // 4)):
                 cx, cy = rng.randrange(size), rng.randrange(size)
+                while dist((cx, cy), self.depot) < min_dist:  # e.g. lunar ice sits in far shadowed craters
+                    cx, cy = rng.randrange(size), rng.randrange(size)
                 for _ in range(4):
                     p = (
                         min(size - 1, max(0, cx + rng.randint(-2, 2))),
@@ -58,7 +63,7 @@ class World:
 
     @property
     def n_fabs(self) -> int:
-        return min(self.fab_kits // FAB_KITS_REQUIRED, self.fab_tooling)
+        return min(self.fab_kits // self.kits_required, self.fab_tooling)
 
     @property
     def fab_built(self) -> bool:
@@ -66,13 +71,13 @@ class World:
 
     @property
     def fab_shells_ready(self) -> int:
-        """Fab structures built from kits that are still waiting for tooling."""
-        return self.fab_kits // FAB_KITS_REQUIRED - self.fab_tooling
+        """Station structures built from kits that are still waiting for their core (tooling / anode)."""
+        return self.fab_kits // self.kits_required - self.fab_tooling
 
     def install_imported_tooling(self) -> int:
         n = 0
-        while self.imports["fab_tooling"] > 0 and self.fab_shells_ready > 0:
-            self.imports["fab_tooling"] -= 1
+        while self.imports[self.core] > 0 and self.fab_shells_ready > 0:
+            self.imports[self.core] -= 1
             self.fab_tooling += 1
             n += 1
         self.sync_fabs()
@@ -94,13 +99,11 @@ class World:
         return t < self.storm_until
 
     def solar_factor(self, t: int) -> float:
-        """0..~3.1 insolation over a sol, mean 1.0 in clear weather."""
-        phase = (t % SOL_TICKS) / SOL_TICKS
-        sun = max(0.0, math.sin(2 * math.pi * phase)) * math.pi
-        return sun * (STORM_SOLAR if self.storm(t) else 1.0)
+        """Power per tick; mean 1.0 in clear conditions (see Body.solar_factor)."""
+        return self.body.solar_factor(t, self.storm(t), SOL_TICKS)
 
     def nearest_deposit(self, pos: Pos, rtype: str) -> Pos | None:
-        if rtype in EVERYWHERE:
+        if rtype in self.body.everywhere:
             return pos
         cells = self.deposits[rtype]
         if not cells:
@@ -108,7 +111,7 @@ class World:
         return min(cells, key=lambda c: dist(pos, c))
 
     def mine(self, pos: Pos, rtype: str, amount: int = 1) -> int:
-        if rtype in EVERYWHERE:
+        if rtype in self.body.everywhere:
             return amount
         cells = self.deposits[rtype]
         have = cells.get(pos, 0)
@@ -124,7 +127,7 @@ class World:
         """Discover a new vein. Easy finds are near the base; each later find is further out."""
         self.finds = getattr(self, "finds", Counter())
         self.finds[rtype] += 1
-        radius = min(self.size // 2 - 3, 6 + 3 * self.finds[rtype])
+        radius = min(self.size // 2 - 3, max(6 + 3 * self.finds[rtype], self.body.deposit_min_dist.get(rtype, 0)))
         while True:
             cx = self.depot[0] + self.rng.randint(-radius, radius)
             cy = self.depot[1] + self.rng.randint(-radius, radius)

@@ -17,7 +17,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from .bom import ASSEMBLY_ENERGY, CHIP_RECIPE, EVERYWHERE, FAB_KIT, FAB_KITS_REQUIRED, RAW, ROBOT_BOM, TOOLING_RECIPE, Recipe
+from .body import MARS, Body
+from .bom import Recipe
 from .robot import Robot
 from .world import Pos, dist
 
@@ -28,7 +29,6 @@ Action = tuple
 
 WORKER_CARGO = 10
 CONTRACT_CHUNK = 10
-TOOLING_TARGET = {"fab_tooling": 1}
 
 
 def step_toward(a: Pos, b: Pos) -> Pos:
@@ -62,31 +62,43 @@ def bucket(robot_id: int, salt: int) -> float:
 
 
 class ScriptedController:
-    def __init__(self, recipes: dict[str, Recipe]):
-        self.base_recipes = recipes
-        self.variants: dict[tuple[bool, bool], tuple[dict, list]] = {}
-        for chip in (False, True):
-            for tooling in (False, True):
-                r = dict(recipes)
-                if chip:
-                    r["chip"] = CHIP_RECIPE
-                if tooling:
-                    r["fab_tooling"] = TOOLING_RECIPE
-                self.variants[(chip, tooling)] = (r, topo_order(r))
+    def __init__(self, body: Body = MARS):
+        self.body = body
+        self.raw = body.raw
+        self.robot_bom = body.robot_bom
+        self.kit = body.station.kit
+        self.core_target = {body.station.core: 1}
+        self.variants: dict[tuple, tuple[dict, list]] = {}
+
+    def variant(self, station_built: bool, skip: frozenset) -> tuple[dict, list]:
+        """Recipes usable now: base, plus station recipes (minus ones we take from imports) and the core recipe."""
+        key = (station_built, skip)
+        if key not in self.variants:
+            r = dict(self.body.recipes)
+            st = self.body.station
+            if station_built:
+                for rec in st.recipes:
+                    if rec.output not in skip:
+                        r[rec.output] = rec
+                if st.core_recipe:
+                    r[st.core] = st.core_recipe
+            self.variants[key] = (r, topo_order(r))
+        return self.variants[key]
 
     # ---- helpers ------------------------------------------------------------
 
     def import_available(self, sim: "Simulation", item: str, building_fab: bool) -> int:
         n = sim.world.imports[item]
-        if item == "chip" and not building_fab:
+        if item == self.body.vitamin and not building_fab:
             n -= sim.policy.get("chip_reserve", 0)
         return n
 
     def recipes_for(self, sim: "Simulation", building_fab: bool) -> tuple[dict, list]:
-        """Fabricate chips only when a fab exists and no imported chip is available to us."""
-        fab = sim.world.fab_built
-        chip = fab and self.import_available(sim, "chip", building_fab) <= 0
-        return self.variants[(chip, fab)]
+        """Station recipes need a station; import-first outputs (Mars chips) are made only when no imports are left."""
+        built = sim.world.fab_built
+        skip = frozenset(i for i in self.body.station.import_first
+                         if not built or self.import_available(sim, i, building_fab) > 0)
+        return self.variant(built, skip)
 
     def net_requirements(self, robot: Robot, target: dict[str, int], recipes: dict, order: list) -> Counter:
         """MRP-style netting: what is still missing to complete `target`."""
@@ -115,10 +127,11 @@ class ScriptedController:
             return None
         if bucket(robot.id, 1) >= p.get("fab_share", 0.5):
             return None
-        if w.fab_kits < target_fabs * FAB_KITS_REQUIRED:
-            return FAB_KIT
-        if w.fab_shells_ready > w.imports["fab_tooling"] and w.fab_built and p.get("make_tooling", True):
-            return TOOLING_TARGET
+        if w.fab_kits < target_fabs * w.kits_required:
+            return self.kit
+        core_recipe = self.body.station.core_recipe is not None
+        if core_recipe and w.fab_shells_ready > w.imports[w.core] and w.fab_built and p.get("make_tooling", True):
+            return self.core_target
         return None
 
     def contract_task(self, robot: Robot, sim: "Simulation", forced: bool):
@@ -135,7 +148,7 @@ class ScriptedController:
         return c, items[(robot.id // len(active)) % len(items)]
 
     def decide(self, robot: Robot, sim: "Simulation") -> Action:
-        broken = [p for p, n in robot.built_defects.items() if n and p != "chip"]
+        broken = [p for p, n in robot.built_defects.items() if n and p != self.body.vitamin]
         if broken and sim.config.self_repair:
             part = broken[0]
             if robot.inventory[part] > 0:
@@ -156,7 +169,7 @@ class ScriptedController:
             return self.work_toward(robot, sim, {item: want}, building_fab=False)
 
         if can_rep:
-            return self.work_toward(robot, sim, ROBOT_BOM, building_fab=False)
+            return self.work_toward(robot, sim, self.robot_bom, building_fab=False)
         return self.decide_worker(robot, sim)
 
     def work_toward(self, robot: Robot, sim: "Simulation", target: dict[str, int], building_fab: bool) -> Action:
@@ -166,11 +179,11 @@ class ScriptedController:
         net = self.net_requirements(robot, target, recipes, order)
 
         if not any(net[p] for p in target):
-            if target is ROBOT_BOM:
-                return ("assemble",) if robot.energy >= ASSEMBLY_ENERGY + reserve else ("wait",)
-            if target is FAB_KIT:
+            if target is self.robot_bom:
+                return ("assemble",) if robot.energy >= self.body.assembly_energy + reserve else ("wait",)
+            if target is self.kit:
                 return ("deliver_kit",) if robot.pos == world.depot else ("move", world.depot)
-            if target is TOOLING_TARGET:
+            if target is self.core_target:
                 return ("deliver_tooling",) if robot.pos == world.depot else ("move", world.depot)
             return ("wait",)  # repair / contract targets are completed by decide()
 
@@ -184,19 +197,19 @@ class ScriptedController:
                 if rec.at_fab:
                     if robot.pos != world.depot:
                         return ("move", world.depot)
-                    if item == "fab_tooling" and world.free_fab(sim.t) is None:
+                    if item == world.core and world.free_fab(sim.t) is None:
                         world.tooling_waiting_until = sim.t + 2  # hold the next free fab for tooling
-                    if world.free_fab(sim.t) is None or (item == "chip" and world.tooling_waiting_until > sim.t):
+                    if world.free_fab(sim.t) is None or (item != world.core and world.tooling_waiting_until > sim.t):
                         continue
                 return ("start", rec) if robot.energy >= rec.energy + reserve else ("wait",)
 
-        source = self.nearest_raw_source(robot, [r for r in RAW if net[r]], sim)
+        source = self.nearest_raw_source(robot, [r for r in self.raw if net[r]], sim)
         if source:
             pos, rtype, from_stock = source
             if robot.pos == pos:
                 return ("take_stock", rtype, net[rtype]) if from_stock else ("mine", rtype)
             return ("move", pos)
-        missing = [r for r in RAW if net[r]]
+        missing = [r for r in self.raw if net[r]]
         if missing:
             sim.stats["starved_feedstock"] += 1  # every known deposit is exhausted: go look for more
             return ("prospect", missing[0])
@@ -211,7 +224,7 @@ class ScriptedController:
             dep = world.nearest_deposit(robot.pos, r)
             if dep is not None:
                 # harvesting the atmosphere/regolith in place is slow; treat it as a few cells of travel
-                options.append((dist(robot.pos, dep) + (3 if r in EVERYWHERE else 0), dep, r, False))
+                options.append((dist(robot.pos, dep) + (3 if r in self.body.everywhere else 0), dep, r, False))
             if world.stockpile[r] > 0:
                 options.append((dist(robot.pos, world.depot), world.depot, r, True))
             for o in options:
@@ -222,10 +235,10 @@ class ScriptedController:
     def decide_worker(self, robot: Robot, sim: "Simulation") -> Action:
         """Idle non-replicators harvest feedstock into the base stockpile."""
         world = sim.world
-        cargo = sum(robot.inventory[r] for r in RAW)
+        cargo = sum(robot.inventory[r] for r in self.raw)
         if cargo >= WORKER_CARGO:
             return ("deliver",) if robot.pos == world.depot else ("move", world.depot)
-        mineable = [r for r in RAW if world.nearest_deposit(robot.pos, r) is not None]
+        mineable = [r for r in self.raw if world.nearest_deposit(robot.pos, r) is not None]
         if not mineable:
             return ("deliver",) if cargo and robot.pos == world.depot else ("wait",)
         focus = sim.policy.get("harvest_focus")

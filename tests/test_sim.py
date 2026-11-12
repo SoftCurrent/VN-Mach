@@ -203,6 +203,8 @@ def fake_claude(text, stop_reason="end_turn"):
     d.anthropic = anthropic
     d.model, d.effort, d.total_ticks, d.history_window, d.verbose = "claude-opus-5-5", "low", 1000, 6, False
     d.system = system_prompt(EconConfig())
+    from vnmach.llm import DECISION_SCHEMA
+    d.schema = DECISION_SCHEMA
     d.log, d.usage = [], Counter()
     msgs = FakeMessages(text, stop_reason)
     d.client = SimpleNamespace(beta=SimpleNamespace(messages=msgs))
@@ -230,3 +232,61 @@ def test_claude_director_refusal_keeps_policy():
     d, _ = fake_claude("", stop_reason="refusal")
     assert d.decide(Simulation(Config()).snapshot()) == {}
     assert d.usage["errors"] == 1
+
+
+# ---- Moon ---------------------------------------------------------------------
+
+def test_moon_closure_only_avionics_imported():
+    from vnmach.body import MOON
+
+    rep = closure(MOON.all_recipes(), robot_bom=MOON.robot_bom, raw=MOON.raw,
+                  vitamin_mass={MOON.vitamin: MOON.vitamin_mass})
+    assert rep.vitamins == {"chip": 1}
+    assert rep.mass_closure > 0.96
+    assert set(rep.raw_per_robot) == {"regolith"}  # no ice, no CO2: the robot is regolith plus avionics
+
+
+def test_moon_recipes_fit_in_one_battery():
+    from vnmach.body import MOON
+
+    for rec in MOON.all_recipes().values():
+        assert rec.energy + Genome().energy_reserve <= BATTERY_CAPACITY, rec.output
+
+
+def test_moon_starts_with_an_mre_cell_and_mre_releases_oxygen():
+    sim = run(body="moon", ticks=3000)
+    assert sim.world.n_fabs == 1
+    assert sim.stats["made_fesi"] > 0 and sim.stats["made_oxygen"] > 0
+    assert sim.stats["births"] > 0
+    assert sim.econ.ledger["launch"] < 0  # the MRE cell and robots were paid for at landing
+
+
+def test_moon_ice_is_far_from_base():
+    from vnmach.world import dist
+
+    sim = Simulation(Config(body="moon", ticks=10))
+    for p in sim.world.deposits["ice"]:
+        assert dist(p, sim.world.depot) >= 14 - 2  # vein centre >= 14, cells spread +-2
+
+
+def test_moon_has_no_conjunction_or_storms():
+    sim = Simulation(Config(body="moon", ticks=10, director_location="earth"))
+    assert not any(sim.in_conjunction(t) for t in range(0, 20000, 10))
+    assert not sim.world.dust_storms
+
+
+def test_moon_auto_orders_avionics_and_anodes():
+    from vnmach.body import MOON
+
+    sim = run(HeuristicDirector("auto", total_ticks=8000, body=MOON), body="moon", ticks=8000)
+    assert sim.stats["imported_chip"] > 0
+    assert sim.stats["imported_anode"] >= 1
+    assert sim.world.n_fabs >= 2
+
+
+def test_moon_economy_defaults():
+    sim = Simulation(Config(body="moon", ticks=10))
+    e = sim.econ.cfg
+    assert e.window_period_sols == 30 and e.transit_sols == 5
+    assert "oxygen_delivery" in e.contract_types
+    assert 250 < e.catalog["robot"].mass_kg < 350
