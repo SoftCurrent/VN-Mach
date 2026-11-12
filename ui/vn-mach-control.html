@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Layout: an operations console. Live map on the left, the director's desk on the right,
-   telemetry and logs underneath. Map keeps Mars colours in both themes. */
+   telemetry and logs underneath. The map keeps the planet's own colours in both themes. */
 :root {
   --bg: #eceff2; --panel: #ffffff; --panel-2: #f5f7f9; --ink: #16202a; --muted: #5a6572; --line: #d4dae0;
   --accent: #2c6390; --accent-ink: #ffffff; --ochre: #b0602a;
@@ -125,11 +125,11 @@ td.r, th.r { text-align: right; }
 
 <div class="wrap">
   <header class="bar">
-    <div class="brand"><h1>VN-Mach</h1><span>Self-replicating robot colony, Mars</span></div>
-    <div class="clock" aria-live="off"><small>SOL</small> <span id="sol" class="num">0</span> <small id="solOf">/ 2000</small></div>
+    <div class="brand"><h1>VN-Mach</h1><span id="subtitle">Self-replicating robot colony, Mars</span></div>
+    <div class="clock" aria-live="off"><small id="dayUnit">SOL</small> <span id="sol" class="num">0</span> <small id="solOf">/ 2000</small></div>
     <div class="transport">
       <button id="play" class="primary" aria-label="Play">Play</button>
-      <button id="stepSol" title="Advance one sol">+1 sol</button>
+      <button id="stepSol">+1 sol</button>
       <select id="speed" aria-label="Speed">
         <option value="0.2">0.2 sol/frame</option>
         <option value="1" selected>1 sol/frame</option>
@@ -146,20 +146,10 @@ td.r, th.r { text-align: right; }
     <div class="stack">
       <section class="card mapbox">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
-          <h2>Jezero-class site, 48 × 48 km</h2><span class="note" id="mapnote"></span>
+          <h2 id="mapTitle">Jezero-class site, 48 × 48 km</h2><span class="note" id="mapnote"></span>
         </div>
         <canvas id="map" width="576" height="576" style="margin-top:10px" aria-label="Map of the colony"></canvas>
-        <div class="legend">
-          <span><i style="background:#f4efe6"></i>Building copies</span>
-          <span><i style="background:#79b8f0"></i>Fab crew</span>
-          <span><i style="background:#f2c14e"></i>Contract work</span>
-          <span><i style="background:#9aa5b1"></i>Harvesting</span>
-          <span><i style="background:#ef5d52"></i>Self-repair</span>
-          <span><i class="sq" style="background:#7a2e1b"></i>Hematite</span>
-          <span><i class="sq" style="background:#bfe6f2"></i>Ice</span>
-          <span><i class="sq" style="background:#ffffff;outline:1px solid #888"></i>Base and fabs</span>
-          <span><i class="sq" style="background:#f2c14e;transform:rotate(45deg)"></i>Contract site</span>
-        </div>
+        <div class="legend" id="legend"></div>
       </section>
       <section class="card summary" id="summary" aria-live="polite"></section>
     </div>
@@ -170,8 +160,8 @@ td.r, th.r { text-align: right; }
         <div class="tabs" role="group" aria-label="Who runs the colony">
           <button data-mode="auto" aria-pressed="true">Auto</button>
           <button data-mode="you" aria-pressed="false">You</button>
-          <button data-mode="import" aria-pressed="false">Import chips</button>
-          <button data-mode="fab" aria-pressed="false">Build fab</button>
+          <button data-mode="import" aria-pressed="false" id="tab_import">Import chips</button>
+          <button data-mode="fab" aria-pressed="false" id="tab_fab">Build fab</button>
         </div>
         <p class="note" id="modeNote"></p>
 
@@ -179,14 +169,14 @@ td.r, th.r { text-align: right; }
           <h3 style="font-size:16px">Colony policy</h3>
           <div class="grid2">
             <label class="toggle"><input type="checkbox" id="p_replicate" checked> Robots build copies</label>
-            <label class="toggle"><input type="checkbox" id="p_build_fab"> Build chip fabs</label>
-            <div class="field"><div class="row"><label for="p_target_fabs">Target fabs</label><span class="num" id="v_target_fabs"></span></div>
+            <label class="toggle"><input type="checkbox" id="p_build_fab"> <span id="l_build_fab">Build chip fabs</span></label>
+            <div class="field"><div class="row"><label for="p_target_fabs" id="l_target_fabs">Target fabs</label><span class="num" id="v_target_fabs"></span></div>
               <input type="range" id="p_target_fabs" min="0" max="12" step="1" value="1"></div>
-            <div class="field"><div class="row"><label for="p_fab_share">Fab crew</label><span class="num" id="v_fab_share"></span></div>
+            <div class="field"><div class="row"><label for="p_fab_share" id="l_fab_share">Fab crew</label><span class="num" id="v_fab_share"></span></div>
               <input type="range" id="p_fab_share" min="0" max="1" step="0.05" value="0.5"></div>
             <div class="field"><div class="row"><label for="p_contract_share">Contract crew</label><span class="num" id="v_contract_share"></span></div>
               <input type="range" id="p_contract_share" min="0" max="1" step="0.05" value="0"></div>
-            <div class="field"><div class="row"><label for="p_chip_reserve">Chips held for fab kits</label><span class="num" id="v_chip_reserve"></span></div>
+            <div class="field"><div class="row"><label for="p_chip_reserve" id="l_chip_reserve">Chips held for fab kits</label><span class="num" id="v_chip_reserve"></span></div>
               <input type="range" id="p_chip_reserve" min="0" max="20" step="1" value="0"></div>
           </div>
           <p class="note">Robots that can't build copies (each makes at most 3) work contracts, or harvest when there are none.</p>
@@ -221,8 +211,8 @@ td.r, th.r { text-align: right; }
       <div class="charts" style="margin-top:10px">
         <div class="chart"><h3>Robots <span class="num" id="c_pop"></span></h3><canvas id="ch_pop" height="110"></canvas></div>
         <div class="chart"><h3>Cash <span class="num" id="c_cash"></span></h3><canvas id="ch_cash" height="110"></canvas></div>
-        <div class="chart"><h3>Chips made on Mars <span class="num" id="c_chips"></span></h3><canvas id="ch_chips" height="110"></canvas></div>
-        <div class="chart"><h3>Chip fabs <span class="num" id="c_fabs"></span></h3><canvas id="ch_fabs" height="110"></canvas></div>
+        <div class="chart"><h3><span id="t_chips">Chips made on Mars</span> <span class="num" id="c_chips"></span></h3><canvas id="ch_chips" height="110"></canvas></div>
+        <div class="chart"><h3><span id="t_fabs">Chip fabs</span> <span class="num" id="c_fabs"></span></h3><canvas id="ch_fabs" height="110"></canvas></div>
       </div>
     </section>
     <section class="card">
@@ -235,13 +225,14 @@ td.r, th.r { text-align: right; }
     <section class="card">
       <h2>Scenario</h2>
       <div class="grid2" style="margin-top:10px">
-        <div class="field"><label for="s_launch">Launch cost, $/kg landed</label>
-          <select id="s_launch"><option value="20000">$20,000 (early flights)</option><option value="5000" selected>$5,000</option><option value="1000">$1,000</option><option value="250">$250 (mature)</option></select></div>
+        <div class="field"><label for="s_body">Destination</label>
+          <select id="s_body"><option value="mars">Mars</option><option value="moon">The Moon</option></select></div>
+        <div class="field"><label for="s_launch">Launch cost, $/kg landed</label><select id="s_launch"></select></div>
         <div class="field"><label for="s_sols">Mission length</label>
           <select id="s_sols"><option value="800">800 sols</option><option value="2000" selected>2000 sols</option><option value="4000">4000 sols</option></select></div>
-        <div class="field"><label for="s_chips">Chips on first landing</label><input type="number" id="s_chips" min="0" max="200" value="20"></div>
+        <div class="field"><label for="s_chips" id="l_chips">Chips on first landing</label><input type="number" id="s_chips" min="0" max="200" value="20"></div>
         <div class="field"><label for="s_seed">Seed</label><input type="number" id="s_seed" min="0" max="9999" value="0"></div>
-        <label class="toggle"><input type="checkbox" id="s_storms" checked> Dust storms</label>
+        <label class="toggle" id="l_storms"><input type="checkbox" id="s_storms" checked> Dust storms</label>
         <div style="display:flex;justify-content:flex-end"><button id="restart">Restart mission</button></div>
       </div>
       <p class="note" style="margin-top:10px">Arm control, below, sets how reliably and how fast robots seat parts when they fabricate and assemble. Pick a row, then restart.</p>
@@ -252,80 +243,148 @@ td.r, th.r { text-align: right; }
         <thead><tr><th>Controller</th><th>Conditions</th><th class="r">Seats part</th><th class="r">Time ×</th><th class="r">Robot assembly*</th></tr></thead>
         <tbody id="armRows"></tbody>
       </table></div>
-      <p class="note" style="margin-top:8px">*A robot needs 4 insertions; all must succeed. Dusty = 3 mm camera error, worn = motors at 25% torque, tight = 0.1 mm clearance, harsh = all three. Teleop delays are one-way; Mars is 240–1,440 s away, so only supervisory control (send goals, let the robot execute) works from Earth.</p>
+      <p class="note" style="margin-top:8px">*A robot needs 4 insertions; all must succeed. Dusty = 3 mm camera error, worn = motors at 25% torque, tight = 0.1 mm clearance, harsh = all three. Measured under Mars gravity. Teleop delays are one-way: the Moon is 1.3 s away and Mars 240–1,440 s, so even the Moon is too far for precise teleoperation. Supervisory control (send goals, let the robot execute) works from Earth.</p>
     </section>
   </div>
 
-  <p class="footer">JavaScript port of the Python model in the VN-Mach repository (same rules and numbers). Prices, launch costs and contract demand are assumptions; change them in <span class="mono">vnmach/econ.py</span>.</p>
+  <p class="footer">JavaScript port of the Python model in the VN-Mach repository (same rules and numbers). Prices, launch costs and contract demand are assumptions; change them in <span class="mono">vnmach/body.py</span>.</p>
 </div>
 
 <script>
 // VN-Mach simulation engine: a JavaScript port of the Python model in vnmach/
-// (bom.py, world.py, econ.py, robot.py, controller.py, sim.py, director.py).
+// (body.py, bom.py, world.py, econ.py, robot.py, controller.py, sim.py, director.py).
 // Same rules and numbers; a different RNG, so runs match statistically, not tick for tick.
 // No DOM: runs in the browser and in node (for parity tests).
 
 const VN = (() => {
-  // ---- bill of materials -------------------------------------------------
-  const RAW = ["hematite", "basalt", "ice", "co2"];
-  const EVERYWHERE = new Set(["basalt", "co2"]);
-  const R = (output, inputs, energy, ticks, kind, precision = 0, mass = 1, at_fab = false) =>
-    ({ output, inputs, energy, ticks, kind, precision, mass, at_fab });
-  const BASE_RECIPES = [
-    R("steel", { hematite: 2, ice: 1, carbon: 1 }, 6, 4, "refine"),
-    R("aluminium", { basalt: 3 }, 10, 5, "refine"),
-    R("silicon", { basalt: 2 }, 8, 4, "refine"),
-    R("glass", { basalt: 1 }, 3, 2, "refine"),
-    R("carbon", { co2: 2 }, 4, 3, "refine"),
-    R("polymer", { carbon: 1, ice: 1 }, 4, 3, "refine"),
-    R("propellant", { co2: 2, ice: 2 }, 8, 4, "refine"),
-    R("frame", { steel: 2, aluminium: 2 }, 4, 8, "fabricate", 0.1, 8.0),
-    R("motor", { steel: 1, aluminium: 1 }, 3, 6, "fabricate", 0.4, 2.0),
-    R("wiring", { aluminium: 1, polymer: 1 }, 1, 3, "fabricate", 0.2, 1.0),
-    R("solar_panel", { silicon: 2, glass: 1 }, 5, 8, "fabricate", 0.5, 3.0),
-    R("battery", { aluminium: 1, polymer: 1, steel: 1 }, 3, 5, "fabricate", 0.3, 3.0),
-    R("sensor", { silicon: 1, glass: 1, aluminium: 1 }, 3, 6, "fabricate", 0.6, 0.5),
-  ];
-  const CHIP_RECIPE = R("chip", { silicon: 4, aluminium: 1 }, 30, 40, "fabricate", 0.9, 0.2, true);
-  const TOOLING_RECIPE = R("fab_tooling",
-    { steel: 12, aluminium: 8, silicon: 10, glass: 6, sensor: 4, motor: 4, chip: 2 }, 40, 400, "fabricate", 0.7, 80.0, true);
-  const ROBOT_BOM = { frame: 1, motor: 4, wiring: 2, solar_panel: 1, battery: 1, sensor: 1, chip: 1 };
-  const FAB_KIT = { steel: 4, glass: 3, aluminium: 3, sensor: 2, motor: 2, chip: 1 };
-  const FAB_KITS_REQUIRED = 4;
-  const TOOLING_TARGET = { fab_tooling: 1 };
-  const ASSEMBLY_TICKS = 20, ASSEMBLY_ENERGY = 10;
+  const R = (output, inputs, energy, ticks, kind, precision = 0, mass = 1, at_fab = false, byproducts = {}) =>
+    ({ output, inputs, energy, ticks, kind, precision, mass, at_fab, byproducts });
   const defectProbability = (rec, base) => Math.min(0.95, base * (1 + 9 * rec.precision));
+  const byOutput = list => Object.fromEntries(list.map(r => [r.output, r]));
+
+  // ---- bodies (mirrors vnmach/body.py) -------------------------------------
+  const MARS = {
+    name: "mars", place: "Mars", day: "sol", site: "Jezero-class site",
+    raw: ["hematite", "basalt", "ice", "co2"], everywhere: new Set(["basalt", "co2"]),
+    deposit_min_dist: { hematite: 0, ice: 0 },
+    recipes: byOutput([
+      R("steel", { hematite: 2, ice: 1, carbon: 1 }, 6, 4, "refine"),
+      R("aluminium", { basalt: 3 }, 10, 5, "refine"),
+      R("silicon", { basalt: 2 }, 8, 4, "refine"),
+      R("glass", { basalt: 1 }, 3, 2, "refine"),
+      R("carbon", { co2: 2 }, 4, 3, "refine"),
+      R("polymer", { carbon: 1, ice: 1 }, 4, 3, "refine"),
+      R("propellant", { co2: 2, ice: 2 }, 8, 4, "refine"),
+      R("frame", { steel: 2, aluminium: 2 }, 4, 8, "fabricate", 0.1, 8.0),
+      R("motor", { steel: 1, aluminium: 1 }, 3, 6, "fabricate", 0.4, 2.0),
+      R("wiring", { aluminium: 1, polymer: 1 }, 1, 3, "fabricate", 0.2, 1.0),
+      R("solar_panel", { silicon: 2, glass: 1 }, 5, 8, "fabricate", 0.5, 3.0),
+      R("battery", { aluminium: 1, polymer: 1, steel: 1 }, 3, 5, "fabricate", 0.3, 3.0),
+      R("sensor", { silicon: 1, glass: 1, aluminium: 1 }, 3, 6, "fabricate", 0.6, 0.5),
+    ]),
+    robot_bom: { frame: 1, motor: 4, wiring: 2, solar_panel: 1, battery: 1, sensor: 1, chip: 1 },
+    assembly_ticks: 20, assembly_energy: 10, fatal_parts: new Set(["chip", "frame"]),
+    vitamin: "chip", vitamin_mass: 0.2,
+    station: {
+      name: "chip fab", kit: { steel: 4, glass: 3, aluminium: 3, sensor: 2, motor: 2, chip: 1 }, kits_required: 4,
+      core: "fab_tooling",
+      core_recipe: R("fab_tooling", { steel: 12, aluminium: 8, silicon: 10, glass: 6, sensor: 4, motor: 4, chip: 2 },
+        40, 400, "fabricate", 0.7, 80.0, true),
+      recipes: [R("chip", { silicon: 4, aluminium: 1 }, 30, 40, "fabricate", 0.9, 0.2, true)],
+      import_first: new Set(["chip"]), makes_vitamin: true,
+    },
+    station_prebuilt: false, station_item: "chip_fab", sunlight: "sol", dust_storms: true,
+    mtbf: 4000, mine_units_per_tick: 1, robots_per_station: 25, conjunction_days: 14, earth_latency_ticks: 1,
+    kg_per_unit: 100,
+    earth_prices: { chip: 100e3, motor: 20e3, sensor: 30e3, solar_panel: 15e3, battery: 25e3, wiring: 2e3,
+      frame: 40e3, robot: 2e6 },
+    special_items: { fab_tooling: [40e6, 8000], chip_fab: [60e6, 15000] },
+    contract_types: {
+      landing_pad: ["launch provider", { glass: 60, steel: 20 }, 300],
+      habitat_shell: ["space agency", { steel: 30, aluminium: 25, glass: 15 }, 400],
+      propellant: ["return-flight operator", { propellant: 120 }, 250],
+      solar_farm: ["research station", { solar_panel: 20, wiring: 15 }, 350],
+      ice_delivery: ["life-support contractor", { ice: 200 }, 150],
+    },
+    econ: { starting_cash: 600e6, launch_cost_per_kg: 5000, launch_cost_decline: 0.15, launch_cost_floor: 500,
+      shipment_fixed_cost: 10e6, window_period_sols: 780, transit_sols: 200, ops_cost_per_sol: 50e3,
+      mars_price_ratio: 0.5, contract_offer_every_sols: 20, demand_growth_per_window: 4.0 },
+    labels: { chip: "chip", fab_tooling: "fab tooling", chip_fab: "complete chip fab" },
+  };
+
+  const MOON = {
+    name: "moon", place: "the Moon", day: "day", site: "South-pole ridge",
+    raw: ["regolith", "ice"], everywhere: new Set(["regolith"]), deposit_min_dist: { ice: 14 },
+    recipes: byOutput([
+      R("iron", { regolith: 12 }, 3, 4, "refine"),
+      R("glass", { regolith: 2 }, 4, 2, "refine"),
+      R("frame", { iron: 4, fesi: 4 }, 6, 20, "fabricate", 0.1, 8.0),
+      R("wheel", { iron: 1 }, 2, 6, "fabricate", 0.1, 1.0),
+      R("motor", { fesi: 1, aluminium: 1, glass: 1 }, 5, 10, "fabricate", 0.5, 2.0),
+      R("reducer", { iron: 2 }, 4, 14, "fabricate", 0.6, 2.0),
+      R("arm", { fesi: 2, aluminium: 1 }, 4, 10, "fabricate", 0.3, 3.0),
+      R("harness", { aluminium: 1, glass: 1 }, 2, 5, "fabricate", 0.2, 2.0),
+    ]),
+    robot_bom: { frame: 1, wheel: 4, motor: 8, reducer: 8, arm: 1, harness: 1, chip: 1 },
+    assembly_ticks: 30, assembly_energy: 10, fatal_parts: new Set(["chip", "frame"]),
+    vitamin: "chip", vitamin_mass: 1.5,
+    station: {
+      name: "MRE cell", kit: { iron: 10, fesi: 4, glass: 6, motor: 2, harness: 1, chip: 1 }, kits_required: 3,
+      core: "anode", core_recipe: null,
+      recipes: [
+        R("fesi", { regolith: 4 }, 20, 6, "refine", 0, 1, true, { oxygen: 2 }),
+        R("aluminium", { regolith: 5 }, 24, 7, "refine", 0, 1, true, { oxygen: 2 }),
+        R("oxygen", { regolith: 3 }, 14, 4, "refine", 0, 1, true, { oxygen: 1 }),
+      ],
+      import_first: new Set(), makes_vitamin: false,
+    },
+    station_prebuilt: true, station_item: "mre_cell", sunlight: "polar", dust_storms: false,
+    mtbf: 3000, mine_units_per_tick: 30, robots_per_station: 6, conjunction_days: 0, earth_latency_ticks: 0,
+    kg_per_unit: 6,
+    earth_prices: { chip: 100e3, motor: 20e3, reducer: 15e3, wheel: 5e3, arm: 60e3, harness: 5e3, frame: 40e3, robot: 3e6 },
+    special_items: { anode: [2e6, 50], mre_cell: [25e6, 2000] },
+    contract_types: {
+      oxygen_delivery: ["lander operator", { oxygen: 150 }, 120],
+      landing_pad: ["launch provider", { glass: 120, regolith: 200 }, 200],
+      shielding_berm: ["habitat operator", { regolith: 500 }, 150],
+      ice_delivery: ["propellant depot", { ice: 200 }, 150],
+    },
+    econ: { starting_cash: 300e6, launch_cost_per_kg: 20000, launch_cost_decline: 0.03, launch_cost_floor: 1000,
+      shipment_fixed_cost: 5e6, window_period_sols: 30, transit_sols: 5, ops_cost_per_sol: 30e3,
+      mars_price_ratio: 0.5, contract_offer_every_sols: 15, demand_growth_per_window: 0.15 },
+    labels: { chip: "avionics module", fesi: "iron-silicon", mre_cell: "complete MRE cell" },
+  };
+  const BODIES = { mars: MARS, moon: MOON };
+  const STORM_SOLAR = 0.25, POLAR_LIT_OUTPUT = 1 / 0.85;
+
+  for (const b of Object.values(BODIES)) {
+    b.all_recipes = { ...b.recipes };
+    for (const rec of b.station.recipes) b.all_recipes[rec.output] = rec;
+    if (b.station.core_recipe) b.all_recipes[b.station.core] = b.station.core_recipe;
+    const massKg = item => item === "robot"
+      ? Object.entries(b.robot_bom).reduce((s, [p, q]) => s + massKg(p) * q, 0)
+      : (b.all_recipes[item] ? b.all_recipes[item].mass : item === b.vitamin ? b.vitamin_mass : 1) * b.kg_per_unit;
+    b.catalog = Object.fromEntries(Object.entries(b.earth_prices).map(([k, v]) => [k, { price: v, mass_kg: massKg(k) }]));
+    for (const [k, [price, mass]] of Object.entries(b.special_items)) b.catalog[k] = { price, mass_kg: mass };
+    b.itemMassKg = item => b.catalog[item] ? b.catalog[item].mass_kg : massKg(item);
+    b.label = item => b.labels[item] || item.replace(/_/g, " ");
+    b.parts = Object.entries(b.robot_bom).flatMap(([p, q]) => Array(q).fill(p));
+    b.solarFactor = (t, storm) => {
+      if (b.sunlight === "polar") {
+        const cycle = Math.round(29.5 * SOL_TICKS);
+        return (t % cycle) >= Math.round(0.15 * cycle) ? POLAR_LIT_OUTPUT : 0;
+      }
+      const phase = (t % SOL_TICKS) / SOL_TICKS;
+      return Math.max(0, Math.sin(2 * Math.PI * phase)) * Math.PI * (storm ? STORM_SOLAR : 1);
+    };
+  }
 
   // ---- robot / world constants --------------------------------------------
   const BATTERY_CAPACITY = 60, SOLAR_OUTPUT = 1, MOVE_COST = 0.3, MINE_COST = 0.5, CHILD_ENERGY = 15;
-  const SOL_TICKS = 10, STORM_CHANCE = 1 / 3000, STORM_DURATION = [150, 600], STORM_SOLAR = 0.25;
-  const INSPECTION_DETECT_RATE = 0.9, REPAIR_TICKS = 10, FATAL_PARTS = new Set(["chip", "frame"]);
-  const BLOCKED_SLEEP_TICKS = 3, PROSPECT_FIND_CHANCE = 1 / 150, CONJUNCTION_SOLS = 14;
+  const SOL_TICKS = 10, STORM_CHANCE = 1 / 3000, STORM_DURATION = [150, 600];
+  const INSPECTION_DETECT_RATE = 0.9, REPAIR_TICKS = 10;
+  const BLOCKED_SLEEP_TICKS = 3, PROSPECT_FIND_CHANCE = 1 / 150;
   const WORKER_CARGO = 10, CONTRACT_CHUNK = 10;
-
-  // ---- economy ----------------------------------------------------------
-  const KG_PER_UNIT = 100;
-  const ALL_RECIPES = Object.fromEntries([...BASE_RECIPES, CHIP_RECIPE, TOOLING_RECIPE].map(r => [r.output, r]));
-  const bomMassKg = item => item === "robot"
-    ? Object.entries(ROBOT_BOM).reduce((s, [p, q]) => s + bomMassKg(p) * q, 0)
-    : (ALL_RECIPES[item] ? ALL_RECIPES[item].mass : 1) * KG_PER_UNIT;
-  const EARTH_PRICES = { chip: 100e3, motor: 20e3, sensor: 30e3, solar_panel: 15e3, battery: 25e3, wiring: 2e3,
-    frame: 40e3, robot: 2e6 };
-  const CATALOG = Object.fromEntries(Object.entries(EARTH_PRICES).map(([k, v]) => [k, { price: v, mass_kg: bomMassKg(k) }]));
-  CATALOG.fab_tooling = { price: 40e6, mass_kg: 8000 };
-  const CONTRACT_TYPES = {
-    habitat_shell: ["space agency", { steel: 30, aluminium: 25, glass: 15 }, 400],
-    ice_delivery: ["life-support contractor", { ice: 200 }, 150],
-    landing_pad: ["launch provider", { glass: 60, steel: 20 }, 300],
-    propellant: ["return-flight operator", { propellant: 120 }, 250],
-    solar_farm: ["research station", { solar_panel: 20, wiring: 15 }, 350],
-  };
-  const DEFAULT_ECON = {
-    starting_cash: 600e6, launch_cost_per_kg: 5000, launch_cost_decline: 0.15, launch_cost_floor: 500,
-    shipment_fixed_cost: 10e6, window_period_sols: 780, transit_sols: 200, ops_cost_per_sol: 50e3,
-    mars_price_ratio: 0.5, contract_offer_every_sols: 20, demand_growth_per_window: 4.0,
-  };
-  const itemMassKg = item => CATALOG[item] ? CATALOG[item].mass_kg : bomMassKg(item);
 
   // ---- helpers ------------------------------------------------------------
   const g = (o, k) => o[k] || 0;
@@ -365,20 +424,24 @@ const VN = (() => {
 
   // ---- world --------------------------------------------------------------
   class World {
-    constructor(r, c) {
-      this.rng = r; this.size = c.size;
+    constructor(r, c, body) {
+      this.rng = r; this.size = c.size; this.body = body;
       this.depot = [Math.floor(c.size / 2), Math.floor(c.size / 2)];
-      this.imports = { chip: c.seed_chips };
+      this.imports = { [body.vitamin]: c.seed_chips };
       this.stockpile = {};
-      this.dust_storms = c.dust_storms; this.storm_until = -1;
-      this.fab_kits = c.chip_fab ? FAB_KITS_REQUIRED : 0;
+      this.dust_storms = c.dust_storms && body.dust_storms; this.storm_until = -1;
+      this.kits_required = body.station.kits_required; this.core = body.station.core;
+      this.fab_kits = c.chip_fab ? this.kits_required : 0;
       this.fab_tooling = c.chip_fab ? 1 : 0;
       this.fab_busy = []; this.tooling_waiting_until = -1; this.finds = {};
       this.syncFabs();
-      this.deposits = { hematite: new Map(), ice: new Map() };
-      for (const rt of ["hematite", "ice"]) {
+      this.deposits = {};
+      for (const rt of body.raw) if (!body.everywhere.has(rt)) this.deposits[rt] = new Map();
+      for (const rt in this.deposits) {
+        const minDist = body.deposit_min_dist[rt] || 0;
         for (let v = 0; v < Math.max(1, Math.floor(c.deposits_per_type / 4)); v++) {
-          const cx = Math.floor(r() * c.size), cy = Math.floor(r() * c.size);
+          let cx, cy;
+          do { cx = Math.floor(r() * c.size); cy = Math.floor(r() * c.size); } while (dist([cx, cy], this.depot) < minDist);
           this.addVein(rt, cx, cy, c.deposit_amount);
         }
       }
@@ -391,13 +454,13 @@ const VN = (() => {
         this.deposits[rt].set(k, (this.deposits[rt].get(k) || 0) + amount);
       }
     }
-    get n_fabs() { return Math.min(Math.floor(this.fab_kits / FAB_KITS_REQUIRED), this.fab_tooling); }
+    get n_fabs() { return Math.min(Math.floor(this.fab_kits / this.kits_required), this.fab_tooling); }
     get fab_built() { return this.n_fabs > 0; }
-    get fab_shells_ready() { return Math.floor(this.fab_kits / FAB_KITS_REQUIRED) - this.fab_tooling; }
+    get fab_shells_ready() { return Math.floor(this.fab_kits / this.kits_required) - this.fab_tooling; }
     installImportedTooling() {
       let n = 0;
-      while (g(this.imports, "fab_tooling") > 0 && this.fab_shells_ready > 0) {
-        this.imports.fab_tooling -= 1; this.fab_tooling += 1; n++;
+      while (g(this.imports, this.core) > 0 && this.fab_shells_ready > 0) {
+        this.imports[this.core] -= 1; this.fab_tooling += 1; n++;
       }
       this.syncFabs();
       return n;
@@ -405,12 +468,10 @@ const VN = (() => {
     syncFabs() { while (this.fab_busy.length < this.n_fabs) this.fab_busy.push(-1); }
     freeFab(t) { for (let i = 0; i < this.fab_busy.length; i++) if (this.fab_busy[i] <= t) return i; return null; }
     storm(t) { return t < this.storm_until; }
-    solarFactor(t) {
-      const phase = (t % SOL_TICKS) / SOL_TICKS;
-      return Math.max(0, Math.sin(2 * Math.PI * phase)) * Math.PI * (this.storm(t) ? STORM_SOLAR : 1);
-    }
+    solarFactor(t) { return this.body.solarFactor(t, this.storm(t)); }
+    dark(t) { return this.body.sunlight === "polar" && this.solarFactor(t) === 0; }
     nearestDeposit(pos, rt) {
-      if (EVERYWHERE.has(rt)) return pos;
+      if (this.body.everywhere.has(rt)) return pos;
       let best = null, bd = Infinity;
       for (const k of this.deposits[rt].keys()) {
         const p = unkey(k), d = dist(pos, p);
@@ -419,14 +480,14 @@ const VN = (() => {
       return best;
     }
     mine(pos, rt, amount = 1) {
-      if (EVERYWHERE.has(rt)) return amount;
+      if (this.body.everywhere.has(rt)) return amount;
       const cells = this.deposits[rt], k = key(pos), have = cells.get(k) || 0, got = Math.min(have, amount);
       if (got) { if (have - got <= 0) cells.delete(k); else cells.set(k, have - got); }
       return got;
     }
     prospect(rt, amount) {
       this.finds[rt] = g(this.finds, rt) + 1;
-      const radius = Math.min(Math.floor(this.size / 2) - 3, 6 + 3 * this.finds[rt]);
+      const radius = Math.min(Math.floor(this.size / 2) - 3, Math.max(6 + 3 * this.finds[rt], this.body.deposit_min_dist[rt] || 0));
       let cx, cy;
       for (;;) {
         cx = this.depot[0] + this.rng.int(-radius, radius);
@@ -452,8 +513,8 @@ const VN = (() => {
 
   // ---- economy ------------------------------------------------------------
   class Economy {
-    constructor(cfg, r, size) {
-      this.cfg = cfg; this.rng = r; this.size = size;
+    constructor(cfg, r, size, body) {
+      this.cfg = cfg; this.rng = r; this.size = size; this.body = body;
       this.cash = cfg.starting_cash; this.ledger = {}; this.manifest = {};
       this.in_transit = []; this.contracts = []; this.next_id = 0;
     }
@@ -463,12 +524,12 @@ const VN = (() => {
       const w = Math.floor(t / this.window_ticks);
       return Math.max(this.cfg.launch_cost_floor, this.cfg.launch_cost_per_kg * Math.pow(1 - this.cfg.launch_cost_decline, w));
     }
-    landedCost(item, t) { const c = CATALOG[item]; return c.price + c.mass_kg * this.launchCostPerKg(t); }
+    landedCost(item, t) { const c = this.body.catalog[item]; return c.price + c.mass_kg * this.launchCostPerKg(t); }
     nextWindow(t) { const w = this.window_ticks; return Math.ceil(t / w) * w; }
     book(cat, amount) { this.cash += amount; add(this.ledger, cat, amount); }
     order(items) {
       const ok = {};
-      for (const [k, v] of Object.entries(items)) if (CATALOG[k] && Math.floor(v) > 0) { ok[k] = Math.floor(v); add(this.manifest, k, ok[k]); }
+      for (const [k, v] of Object.entries(items)) if (this.body.catalog[k] && Math.floor(v) > 0) { ok[k] = Math.floor(v); add(this.manifest, k, ok[k]); }
       return ok;
     }
     manifestCost(m, t) {
@@ -476,7 +537,7 @@ const VN = (() => {
       if (!ks.length) return 0;
       return this.cfg.shipment_fixed_cost + ks.reduce((s, k) => s + this.landedCost(k, t) * m[k], 0);
     }
-    hardwareCost(m) { return Object.entries(m).reduce((s, [k, q]) => s + CATALOG[k].price * q, 0); }
+    hardwareCost(m) { return Object.entries(m).reduce((s, [k, q]) => s + this.body.catalog[k].price * q, 0); }
     launch(t) {
       const m = { ...this.manifest }; this.manifest = {};
       for (const k in m) if (m[k] <= 0) delete m[k];
@@ -505,9 +566,10 @@ const VN = (() => {
       return out;
     }
     offer(t) {
-      const kind = this.rng.choice(Object.keys(CONTRACT_TYPES).sort());
-      const [client, reqs, deadlineSols] = CONTRACT_TYPES[kind];
-      const mass = Object.entries(reqs).reduce((s, [i, q]) => s + itemMassKg(i) * q, 0);
+      const types = this.body.contract_types;
+      const kind = this.rng.choice(Object.keys(types).sort());
+      const [client, reqs, deadlineSols] = types[kind];
+      const mass = Object.entries(reqs).reduce((s, [i, q]) => s + this.body.itemMassKg(i) * q, 0);
       const payment = this.cfg.mars_price_ratio * mass * this.launchCostPerKg(t) * this.rng.uniform(0.8, 1.2);
       const site = [Math.floor(this.rng() * this.size), Math.floor(this.rng() * this.size)];
       const c = { id: this.next_id++, kind, client, requirements: { ...reqs }, payment, offered_at: t,
@@ -556,25 +618,31 @@ const VN = (() => {
 
   // ---- controller -----------------------------------------------------------
   class Controller {
-    constructor() {
-      const base = Object.fromEntries(BASE_RECIPES.map(r => [r.output, r]));
+    constructor(body) {
+      this.body = body; this.kit = body.station.kit; this.coreTarget = { [body.station.core]: 1 };
       this.variants = {};
-      for (const chip of [false, true]) for (const tool of [false, true]) {
-        const r = { ...base };
-        if (chip) r.chip = CHIP_RECIPE;
-        if (tool) r.fab_tooling = TOOLING_RECIPE;
-        this.variants[`${chip}|${tool}`] = [r, topoOrder(r)];
+    }
+    variant(built, skip) {
+      const k = `${built}|${[...skip].sort().join(",")}`;
+      if (!this.variants[k]) {
+        const r = { ...this.body.recipes }, st = this.body.station;
+        if (built) {
+          for (const rec of st.recipes) if (!skip.has(rec.output)) r[rec.output] = rec;
+          if (st.core_recipe) r[st.core] = st.core_recipe;
+        }
+        this.variants[k] = [r, topoOrder(r)];
       }
+      return this.variants[k];
     }
     importAvailable(sim, item, buildingFab) {
       let n = g(sim.world.imports, item);
-      if (item === "chip" && !buildingFab) n -= sim.policy.chip_reserve || 0;
+      if (item === this.body.vitamin && !buildingFab) n -= sim.policy.chip_reserve || 0;
       return n;
     }
     recipesFor(sim, buildingFab) {
-      const fab = sim.world.fab_built;
-      const chip = fab && this.importAvailable(sim, "chip", buildingFab) <= 0;
-      return this.variants[`${chip}|${fab}`];
+      const built = sim.world.fab_built;
+      const skip = new Set([...this.body.station.import_first].filter(i => !built || this.importAvailable(sim, i, buildingFab) > 0));
+      return this.variant(built, skip);
     }
     net(robot, target, recipes, order) {
       const inv = robot.inventory, req = { ...target }, net = {};
@@ -589,8 +657,9 @@ const VN = (() => {
       const p = sim.policy, w = sim.world, target = p.target_fabs ?? 1;
       if (!p.build_fab || w.n_fabs >= target) return null;
       if (bucket(robot.id, 1) >= (p.fab_share ?? 0.5)) return null;
-      if (w.fab_kits < target * FAB_KITS_REQUIRED) return FAB_KIT;
-      if (w.fab_shells_ready > g(w.imports, "fab_tooling") && w.fab_built && (p.make_tooling ?? true)) return TOOLING_TARGET;
+      if (w.fab_kits < target * w.kits_required) return this.kit;
+      if (this.body.station.core_recipe && w.fab_shells_ready > g(w.imports, w.core) && w.fab_built && (p.make_tooling ?? true))
+        return this.coreTarget;
       return null;
     }
     contractTask(robot, sim, forced) {
@@ -602,7 +671,7 @@ const VN = (() => {
     }
     decide(robot, sim) {
       if (sim.config.self_repair) {
-        const broken = Object.keys(robot.built_defects).filter(p => robot.built_defects[p] > 0 && p !== "chip");
+        const broken = Object.keys(robot.built_defects).filter(p => robot.built_defects[p] > 0 && p !== this.body.vitamin);
         if (broken.length) {
           const part = broken[0];
           robot.role = "repair";
@@ -620,7 +689,7 @@ const VN = (() => {
         if (g(robot.inventory, item) >= want) return same(robot.pos, c.site) ? ["deliver_contract", c.id, item] : ["move", c.site];
         return this.workToward(robot, sim, { [item]: want }, false);
       }
-      if (canRep) { robot.role = "replicate"; return this.workToward(robot, sim, ROBOT_BOM, false); }
+      if (canRep) { robot.role = "replicate"; return this.workToward(robot, sim, this.body.robot_bom, false); }
       robot.role = "harvest";
       return this.decideWorker(robot, sim);
     }
@@ -629,9 +698,9 @@ const VN = (() => {
       const [recipes, order] = this.recipesFor(sim, buildingFab);
       const net = this.net(robot, target, recipes, order);
       if (!Object.keys(target).some(p => g(net, p))) {
-        if (target === ROBOT_BOM) return robot.energy >= ASSEMBLY_ENERGY + reserve ? ["assemble"] : ["wait"];
-        if (target === FAB_KIT) return same(robot.pos, w.depot) ? ["deliver_kit"] : ["move", w.depot];
-        if (target === TOOLING_TARGET) return same(robot.pos, w.depot) ? ["deliver_tooling"] : ["move", w.depot];
+        if (target === this.body.robot_bom) return robot.energy >= this.body.assembly_energy + reserve ? ["assemble"] : ["wait"];
+        if (target === this.kit) return same(robot.pos, w.depot) ? ["deliver_kit"] : ["move", w.depot];
+        if (target === this.coreTarget) return same(robot.pos, w.depot) ? ["deliver_tooling"] : ["move", w.depot];
         return ["wait"];
       }
       for (const item in target)
@@ -642,13 +711,13 @@ const VN = (() => {
         if (g(net, item) && Object.entries(rec.inputs).every(([i, q]) => g(inv, i) >= q)) {
           if (rec.at_fab) {
             if (!same(robot.pos, w.depot)) return ["move", w.depot];
-            if (item === "fab_tooling" && w.freeFab(sim.t) === null) w.tooling_waiting_until = sim.t + 2;
-            if (w.freeFab(sim.t) === null || (item === "chip" && w.tooling_waiting_until > sim.t)) continue;
+            if (item === w.core && w.freeFab(sim.t) === null) w.tooling_waiting_until = sim.t + 2;
+            if (w.freeFab(sim.t) === null || (item !== w.core && w.tooling_waiting_until > sim.t)) continue;
           }
           return robot.energy >= rec.energy + reserve ? ["start", rec] : ["wait"];
         }
       }
-      const wanted = RAW.filter(r => g(net, r));
+      const wanted = this.body.raw.filter(r => g(net, r));
       const src = this.nearestRawSource(robot, wanted, sim);
       if (src) {
         const [pos, rt, fromStock] = src;
@@ -664,15 +733,15 @@ const VN = (() => {
       let best = null;
       for (const r of wanted) {
         const dep = w.nearestDeposit(robot.pos, r);
-        if (dep) { const d = dist(robot.pos, dep) + (EVERYWHERE.has(r) ? 3 : 0); if (!best || d < best[0]) best = [d, dep, r, false]; }
+        if (dep) { const d = dist(robot.pos, dep) + (this.body.everywhere.has(r) ? 3 : 0); if (!best || d < best[0]) best = [d, dep, r, false]; }
         if (g(w.stockpile, r) > 0) { const d = dist(robot.pos, w.depot); if (!best || d < best[0]) best = [d, w.depot, r, true]; }
       }
       return best ? best.slice(1) : null;
     }
     decideWorker(robot, sim) {
-      const w = sim.world, cargo = RAW.reduce((s, r) => s + g(robot.inventory, r), 0);
+      const w = sim.world, raw = this.body.raw, cargo = raw.reduce((s, r) => s + g(robot.inventory, r), 0);
       if (cargo >= WORKER_CARGO) return same(robot.pos, w.depot) ? ["deliver"] : ["move", w.depot];
-      const mineable = RAW.filter(r => w.nearestDeposit(robot.pos, r));
+      const mineable = raw.filter(r => w.nearestDeposit(robot.pos, r));
       if (!mineable.length) return cargo && same(robot.pos, w.depot) ? ["deliver"] : ["wait"];
       let focus = sim.policy.harvest_focus;
       if (!mineable.includes(focus)) focus = mineable.reduce((a, b) => g(w.stockpile, a) <= g(w.stockpile, b) ? a : b);
@@ -684,55 +753,91 @@ const VN = (() => {
   // ---- directors ------------------------------------------------------------
   const FAB_BUILD_SOLS = 150, MIN_PAYBACK_SOLS = 400;
   class HeuristicDirector {
-    constructor(strategy = "auto", targetPopulation = 150, totalTicks = 20000, robotsPerFab = 25) {
-      Object.assign(this, { strategy, targetPopulation, totalTicks, robotsPerFab, fabOrdered: false, lastStarved: 0 });
+    constructor(strategy = "auto", targetPopulation = 150, totalTicks = 20000, body = MARS, robotsPerFab = null) {
+      Object.assign(this, { strategy, targetPopulation, totalTicks, body, fabOrdered: false, lastStarved: 0 });
+      this.robotsPerFab = robotsPerFab || body.robots_per_station;
+      const st = body.station;
+      this.vitamin = body.vitamin; this.core = st.core;
+      this.kitVitamins = g(st.kit, body.vitamin); this.kitsRequired = st.kits_required;
+      this.fatalShare = body.fatal_parts.size / Object.values(body.robot_bom).reduce((a, b) => a + b, 0);
     }
-    chipsPipeline(s) { return s.chips_in_depot + g(s.manifest, "chip") + s.in_transit.reduce((a, x) => a + g(x.items, "chip"), 0); }
+    chipsPipeline(s) {
+      return s.chips_in_depot + g(s.manifest, this.vitamin) + s.in_transit.reduce((a, x) => a + g(x.items, this.vitamin), 0);
+    }
     toolingPipeline(s) {
-      return s.fab_tooling + g(s.imports, "fab_tooling") + g(s.manifest, "fab_tooling")
-        + s.in_transit.reduce((a, x) => a + g(x.items, "fab_tooling"), 0);
+      return s.fab_tooling + g(s.imports, this.core) + g(s.manifest, this.core)
+        + s.in_transit.reduce((a, x) => a + g(x.items, this.core), 0);
     }
     chipsStillNeeded(s) {
       const remaining = Math.max(0, this.totalTicks - s.t), growth = Math.max(0, this.targetPopulation - s.population);
-      return growth + Math.floor(this.targetPopulation * (2 / 11 / 4000) * remaining);
+      return growth + Math.floor(this.targetPopulation * (this.fatalShare / s.mtbf) * remaining);
     }
     downtimeCost(s) {
       const robotSols = Math.max(1, s.population) * Math.max(1, s.sol);
       const perRobotSol = g(s.ledger, "contract_revenue") / robotSols;
       const remainingSols = Math.floor(Math.max(0, this.totalTicks - s.t) / SOL_TICKS);
-      const windowSols = (s.next_window_sol - s.sol) || 780;
-      const missing = this.targetPopulation * (2 / 11 / 4000 * SOL_TICKS) * windowSols / 2;
+      const windowSols = (s.next_window_sol - s.sol) || s.window_period_sols;
+      const missing = this.targetPopulation * (this.fatalShare / s.mtbf * SOL_TICKS) * windowSols / 2;
       return missing * remainingSols * perRobotSol;
     }
     wantFab(s) {
       if (this.strategy === "import") return false;
+      if (!this.body.station.makes_vitamin) return true;
       if (this.strategy === "fab" || this.fabOrdered || s.fabs > 0) return true;
       const ready = s.t === 0 ? 0 : s.next_window_sol + s.transit_sols;
       if (Math.floor(this.totalTicks / SOL_TICKS) - (ready + FAB_BUILD_SOLS) < MIN_PAYBACK_SOLS) return false;
-      return this.chipsStillNeeded(s) * s.landed.chip + this.downtimeCost(s) > s.landed.fab_tooling;
+      return this.chipsStillNeeded(s) * s.landed[this.vitamin] + this.downtimeCost(s) > s.landed[this.core];
     }
-    decide(s) {
-      const pop = s.population, fab = this.wantFab(s), orders = {};
-      if (fab && !this.fabOrdered && this.toolingPipeline(s) === 0) { orders.fab_tooling = 1; this.fabOrdered = true; }
-      if (!fab || s.fabs === 0) {
-        const need = Math.min(this.chipsStillNeeded(s), Math.max(0, this.targetPopulation - pop));
-        const kitsLeft = fab && s.fabs === 0 ? Math.max(0, FAB_KITS_REQUIRED - s.fab_kits) : 0;
-        const short = need + kitsLeft * FAB_KIT.chip - this.chipsPipeline(s);
-        if (short > 0) orders.chip = short;
-      }
-      const starving = s.starved_feedstock - this.lastStarved > pop * 25;
+    acceptContracts(s) {
+      const pop = s.population, starving = s.starved_feedstock - this.lastStarved > pop * 25;
       this.lastStarved = s.starved_feedstock;
       const capacity = starving ? 0 : Math.max(1, Math.floor(pop / 5)) - s.active.length;
-      const accept = [...s.offers].sort((a, b) => b.payment - a.payment)
-        .filter(c => (c.deadline - s.t) / SOL_TICKS >= 120).slice(0, Math.max(0, capacity)).map(c => c.id);
-      const kitsLeft = s.fabs === 0 ? Math.max(0, FAB_KITS_REQUIRED - s.fab_kits) : 0;
+      const minSols = Math.min(120, s.window_period_sols * 2);
+      return [...s.offers].sort((a, b) => b.payment - a.payment)
+        .filter(c => Math.floor((c.deadline - s.t) / SOL_TICKS) >= minSols).slice(0, Math.max(0, capacity)).map(c => c.id);
+    }
+    decide(s) {
+      if (!this.body.station.makes_vitamin) return this.decideVitaminImported(s);
+      const pop = s.population, fab = this.wantFab(s), orders = {};
+      if (fab && !this.fabOrdered && this.toolingPipeline(s) === 0) { orders[this.core] = 1; this.fabOrdered = true; }
+      if (!fab || s.fabs === 0) {
+        const need = Math.min(this.chipsStillNeeded(s), Math.max(0, this.targetPopulation - pop));
+        const kitsLeft = fab && s.fabs === 0 ? Math.max(0, this.kitsRequired - s.fab_kits) : 0;
+        const short = need + kitsLeft * this.kitVitamins - this.chipsPipeline(s);
+        if (short > 0) orders[this.vitamin] = short;
+      }
+      const accept = this.acceptContracts(s);
+      const kitsLeft = s.fabs === 0 ? Math.max(0, this.kitsRequired - s.fab_kits) : 0;
       const u = {
         replicate: pop < this.targetPopulation, build_fab: fab,
         target_fabs: fab ? Math.max(1, Math.floor(pop / this.robotsPerFab)) : 0,
-        fab_share: s.fabs === 0 ? 0.5 : 0.25, chip_reserve: fab ? kitsLeft * FAB_KIT.chip : 0,
+        fab_share: s.fabs === 0 ? 0.5 : 0.25, chip_reserve: fab ? kitsLeft * this.kitVitamins : 0,
         contract_share: pop < this.targetPopulation ? 0.15 : 0,
       };
       if (Object.keys(orders).length) u.orders = orders;
+      if (accept.length) u.accept_contracts = accept;
+      return u;
+    }
+    decideVitaminImported(s) {
+      const pop = s.population, fab = this.wantFab(s);
+      const targetFabs = fab ? Math.max(1, Math.floor(pop / this.robotsPerFab)) : s.fabs;
+      const orders = {};
+      const horizon = (s.window_period_sols + s.transit_sols) * SOL_TICKS;
+      const replacements = this.targetPopulation * this.fatalShare / s.mtbf * horizon;
+      const growth = Math.min(Math.max(0, this.targetPopulation - pop), Math.max(3, pop));
+      const kitsNeeded = Math.max(0, targetFabs * this.kitsRequired - s.fab_kits);
+      const short = growth + Math.floor(replacements) + 1 + kitsNeeded * this.kitVitamins - this.chipsPipeline(s);
+      if (short > 0) orders[this.vitamin] = short;
+      if (!this.body.station.core_recipe) {
+        const coresShort = targetFabs - this.toolingPipeline(s);
+        if (coresShort > 0) orders[this.core] = coresShort;
+      }
+      const u = {
+        replicate: pop < this.targetPopulation, build_fab: fab && targetFabs > s.fabs, target_fabs: targetFabs,
+        fab_share: 0.25, chip_reserve: 0, contract_share: pop < this.targetPopulation ? 0.15 : 0,
+      };
+      if (Object.keys(orders).length) u.orders = orders;
+      const accept = this.acceptContracts(s);
       if (accept.length) u.accept_contracts = accept;
       return u;
     }
@@ -740,21 +845,24 @@ const VN = (() => {
 
   // ---- simulation -------------------------------------------------------------
   const DEFAULT_CONFIG = {
-    seed: 0, ticks: 20000, size: 48, seed_robots: 3, seed_chips: 20, chip_fab: false, dust_storms: true,
-    defect_rate: 0.02, max_children: 3, max_population: 400, mtbf: 4000, self_repair: true,
+    body: "mars", seed: 0, ticks: 20000, size: 48, seed_robots: 3, seed_chips: 20, chip_fab: null, dust_storms: true,
+    defect_rate: 0.02, max_children: 3, max_population: 400, mtbf: null, self_repair: true,
     deposits_per_type: 12, deposit_amount: 5000, sample_every: 50, director_interval: 250,
-    director_location: "mars", earth_latency_ticks: 1, skill_success: 1.0, skill_time_multiplier: 1.0,
+    director_location: "onboard", earth_latency_ticks: null, skill_success: 1.0, skill_time_multiplier: 1.0,
     assembly_insertions: 4,
   };
 
   class Sim {
     constructor(config = {}, econ = {}, director = null) {
       this.config = { ...DEFAULT_CONFIG, ...config };
-      const c = this.config;
+      const c = this.config, body = this.body = BODIES[c.body];
+      if (c.mtbf == null) c.mtbf = body.mtbf;
+      if (c.chip_fab == null) c.chip_fab = body.station_prebuilt;
+      if (c.earth_latency_ticks == null) c.earth_latency_ticks = body.earth_latency_ticks;
       this.rng = rng(c.seed);
-      this.world = new World(this.rng, c);
-      this.econ = new Economy({ ...DEFAULT_ECON, ...econ }, rng(c.seed + 10000), c.size);
-      this.controller = new Controller();
+      this.world = new World(this.rng, c, body);
+      this.econ = new Economy({ ...body.econ, ...econ }, rng(c.seed + 10000), c.size, body);
+      this.controller = new Controller(body);
       this.director = director;
       this.policy = { replicate: true, build_fab: false, target_fabs: 1, fab_share: 0.5, make_tooling: true,
         chip_reserve: 0, contract_share: 0, harvest_focus: null };
@@ -780,8 +888,9 @@ const VN = (() => {
       return this.population < this.config.max_population;
     }
     inConjunction(t) {
+      if (!this.body.conjunction_days) return false;
       const w = this.econ.window_ticks, mid = Math.floor(w / 2);
-      return Math.abs((t % w) - mid) <= Math.floor(CONJUNCTION_SOLS * SOL_TICKS / 2);
+      return Math.abs((t % w) - mid) <= Math.floor(this.body.conjunction_days * SOL_TICKS / 2);
     }
     // Player / external commands: from Earth they wait out conjunction and light time.
     command(update, fromEarth = true) {
@@ -791,7 +900,7 @@ const VN = (() => {
         this.log("comms", `Solar conjunction: command queued until sol ${Math.floor(at / SOL_TICKS)}`);
       }
       this.pending.push([at, update]);
-      if (this.t === 0) this.flushPending();
+      if (this.t === 0 || at <= this.t) this.flushPending();
     }
     flushPending() {
       const due = this.pending.filter(([at]) => at <= this.t);
@@ -819,28 +928,34 @@ const VN = (() => {
       this.flushPending();
     }
     land(items) {
+      const b = this.body;
       for (const [item, q] of Object.entries(items)) {
         if (item === "robot") { for (let i = 0; i < q; i++) this.spawn(this.world.depot, 0, null); this.stat("robots_imported", q); }
+        else if (item === b.station_item) {
+          this.world.fab_kits += q * this.world.kits_required; this.world.fab_tooling += q;
+          this.stat("stations_imported", q); this.afterFabChange();
+        }
         else { add(this.world.imports, item, q); this.stat(`imported_${item}`, q); }
       }
       if (this.world.installImportedTooling()) this.afterFabChange();
     }
     economyStep() {
-      const e = this.econ, t = this.t;
+      const e = this.econ, t = this.t, b = this.body;
       if (t === 0) {
-        const first = { robot: this.config.seed_robots, chip: this.config.seed_chips };
+        const first = { robot: this.config.seed_robots, [b.vitamin]: this.config.seed_chips };
+        if (this.config.chip_fab) add(first, b.station_item, 1);
         const extra = { ...e.manifest }; e.manifest = {};
         for (const [k, v] of Object.entries(extra)) add(first, k, v);
         const cost = e.manifestCost(first, 0), hw = e.hardwareCost(first);
         e.book("earth_hardware", -hw); e.book("launch", -(cost - hw));
-        this.log("landing", `First landing: ${describe(first)} (${money(cost)})`);
+        this.log("landing", `First landing: ${describe(first, b)} (${money(cost)})`);
         this.land(extra);
       } else if (t % e.window_ticks === 0) {
         const s = e.launch(t);
-        if (s) { this.stat("shipments"); this.log("launch", `Launch window: ${describe(s.items)} departs Earth (${money(s.cost)}), lands sol ${Math.floor(s.arrives / SOL_TICKS)}`); }
-        else this.log("launch", "Launch window opened: nothing on the manifest");
+        if (s) { this.stat("shipments"); this.log("launch", `Launch window: ${describe(s.items, b)} departs Earth (${money(s.cost)}), lands ${b.day} ${Math.floor(s.arrives / SOL_TICKS)}`); }
+        else if (b.name === "mars") this.log("launch", "Launch window opened: nothing on the manifest");
       }
-      for (const s of e.arrivals(t)) { this.land(s.items); this.log("landing", `Cargo landed: ${describe(s.items)}`); }
+      for (const s of e.arrivals(t)) { this.land(s.items); this.log("landing", `Cargo landed: ${describe(s.items, b)}`); }
       const offers = e.maybeOffer(t);
       if (offers.length) this.stat("offers", offers.length);
       e.tick(t, (k, m) => this.log(k, m));
@@ -857,11 +972,11 @@ const VN = (() => {
       this.t++;
     }
     tickRobot(r) {
-      if (g(r.built_defects, "chip")) { r.alive = false; this.stat("duds"); return; }
+      if (g(r.built_defects, this.body.vitamin)) { r.alive = false; this.stat("duds"); return; }
       if (this.rng() < 1 / this.config.mtbf) { this.componentFailure(r); if (!r.alive) return; }
       const solar = SOLAR_OUTPUT * (g(r.built_defects, "solar_panel") ? 0.4 : 1);
       r.energy = Math.min(BATTERY_CAPACITY, r.energy + solar * this.world.solarFactor(this.t));
-      const n = Object.entries(r.built_defects).reduce((s, [k, v]) => s + (k === "chip" ? 0 : v), 0);
+      const n = Object.entries(r.built_defects).reduce((s, [k, v]) => s + (k === this.body.vitamin ? 0 : v), 0);
       if (this.rng() > Math.max(0.1, 1 - 0.15 * n)) { this.stat("lost_ticks"); return; }
       if (r.job) { if (--r.job.remaining <= 0) this.finishJob(r); return; }
       if (r.travel_to) {
@@ -890,9 +1005,9 @@ const VN = (() => {
       return false;
     }
     execute(r, a) {
-      const w = this.world, kind = a[0];
+      const w = this.world, kind = a[0], b = this.body;
       if (kind === "move") { if (r.energy >= MOVE_COST) { r.energy -= MOVE_COST; r.pos = stepToward(r.pos, a[1]); } }
-      else if (kind === "mine") { if (r.energy >= MINE_COST) { r.energy -= MINE_COST; add(r.inventory, a[1], w.mine(r.pos, a[1])); } }
+      else if (kind === "mine") { if (r.energy >= MINE_COST) { r.energy -= MINE_COST; add(r.inventory, a[1], w.mine(r.pos, a[1], b.mine_units_per_tick)); } }
       else if (kind === "take_stock") { const got = Math.min(a[2], g(w.stockpile, a[1])); w.stockpile[a[1]] -= got; add(r.inventory, a[1], got); }
       else if (kind === "take_import") { if (g(w.imports, a[1]) > 0) { w.imports[a[1]]--; add(r.inventory, a[1], 1); this.stat(`used_imported_${a[1]}`); } }
       else if (kind === "prospect") {
@@ -905,12 +1020,12 @@ const VN = (() => {
           if (this.rng() < PROSPECT_FIND_CHANCE) {
             const at = w.prospect(a[1], this.config.deposit_amount);
             this.stat(`veins_found_${a[1]}`);
-            this.log("prospect", `Prospectors found a new ${a[1]} vein at ${at[0]},${at[1]}`);
+            this.log("prospect", `Prospectors found new ${a[1]} at ${at[0]},${at[1]}`);
           }
         }
       }
       else if (kind === "deliver") {
-        for (const raw of RAW) { const n = g(r.inventory, raw); if (n) { add(w.stockpile, raw, n); this.stat("harvested", n); r.inventory[raw] = 0; } }
+        for (const raw of b.raw) { const n = g(r.inventory, raw); if (n) { add(w.stockpile, raw, n); this.stat("harvested", n); r.inventory[raw] = 0; } }
       }
       else if (kind === "deliver_contract") {
         const c = this.econ.active().find(x => x.id === a[1]);
@@ -923,13 +1038,13 @@ const VN = (() => {
       }
       else if (kind === "deliver_kit") {
         if (w.n_fabs >= (this.policy.target_fabs ?? 1)) return;
-        for (const [item, q] of Object.entries(FAB_KIT)) this.takeParts(r, item, q);
+        for (const [item, q] of Object.entries(b.station.kit)) this.takeParts(r, item, q);
         w.fab_kits++; this.stat("fab_kits");
         this.afterFabChange();
       }
       else if (kind === "deliver_tooling") {
-        this.takeParts(r, "fab_tooling", 1); w.fab_tooling++; this.stat("tooling_made_on_mars");
-        this.log("fab", "Fab tooling made on Mars: a fab built part of another fab");
+        this.takeParts(r, w.core, 1); w.fab_tooling++; this.stat("cores_made_locally");
+        this.log("fab", `${b.label(w.core)} made locally: a ${b.station.name} built part of another`);
         this.afterFabChange();
       }
       else if (kind === "start") {
@@ -944,39 +1059,38 @@ const VN = (() => {
         r.job = { kind: "repair", output: a[1], remaining: REPAIR_TICKS, bad };
       }
       else if (kind === "assemble") {
-        r.energy -= ASSEMBLY_ENERGY + CHILD_ENERGY;
+        r.energy -= b.assembly_energy + CHILD_ENERGY;
         const defects = {};
-        for (const [p, q] of Object.entries(ROBOT_BOM)) { const bad = this.takeParts(r, p, q); if (bad) defects[p] = bad; }
-        r.job = { kind: "assemble", output: "robot", remaining: this.skillTicks(ASSEMBLY_TICKS, "assemble"), defects };
+        for (const [p, q] of Object.entries(b.robot_bom)) { const bad = this.takeParts(r, p, q); if (bad) defects[p] = bad; }
+        r.job = { kind: "assemble", output: "robot", remaining: this.skillTicks(b.assembly_ticks, "assemble"), defects };
       }
     }
     afterFabChange() {
       const w = this.world;
       w.installImportedTooling(); w.syncFabs();
       if (w.n_fabs > g(this.stats, "fabs_built")) {
+        const first = this.stats.fabs_built === undefined;
         this.stats.fabs_built = w.n_fabs;
-        if (this.stats.first_fab_at === undefined) this.stats.first_fab_at = this.t;
-        this.log("fab", `Chip fab #${w.n_fabs} online`);
+        if (this.t > 0 && this.stats.first_fab_at === undefined) this.stats.first_fab_at = this.t;
+        if (!first || this.t > 0) this.log("fab", `${this.body.station.name} #${w.n_fabs} online`);
       }
     }
     componentFailure(r) {
-      const parts = Object.entries(ROBOT_BOM).flatMap(([p, q]) => Array(q).fill(p));
-      const part = this.rng.choice(parts);
+      const part = this.rng.choice(this.body.parts);
       this.stat("component_failures");
-      if (FATAL_PARTS.has(part)) { r.alive = false; this.stat("failures"); }
+      if (this.body.fatal_parts.has(part)) { r.alive = false; this.stat("failures"); }
       else add(r.built_defects, part, 1);
     }
     finishJob(r) {
-      const job = r.job; r.job = null;
+      const job = r.job, b = this.body; r.job = null;
       if (job.kind === "repair") {
         if (job.bad) this.stat("repairs_failed"); else { r.built_defects[job.output]--; this.stat("repairs"); }
         return;
       }
       if (job.kind === "assemble") {
         if (this.manipulationFailed(this.config.assembly_insertions)) {
-          const parts = Object.entries(ROBOT_BOM).flatMap(([p, q]) => Array(q).fill(p));
-          const lost = this.rng.choice(parts);
-          for (const [p, q] of Object.entries(ROBOT_BOM)) add(r.inventory, p, q - (p === lost ? 1 : 0));
+          const lost = this.rng.choice(b.parts);
+          for (const [p, q] of Object.entries(b.robot_bom)) add(r.inventory, p, q - (p === lost ? 1 : 0));
           return;
         }
         this.spawn(r.pos, r.generation + 1, r.id, job.defects, CHILD_ENERGY, { ...r.genome });
@@ -985,10 +1099,15 @@ const VN = (() => {
         return;
       }
       if (job.kind === "fabricate" && this.manipulationFailed()) return;
-      if (job.output === "chip") {
+      if (job.output === b.vitamin) {
         this.stat("chips_made");
-        if (this.stats.chips_made === 1) this.log("fab", "First chip made on Mars");
+        if (this.stats.chips_made === 1) this.log("fab", `First ${b.label(b.vitamin)} made on ${b.place}`);
       }
+      if (job.recipe.at_fab) {
+        this.stat(`made_${job.output}`);
+        for (const [item, q] of Object.entries(job.recipe.byproducts)) this.stat(`made_${item}`, q);
+      }
+      for (const [item, q] of Object.entries(job.recipe.byproducts)) add(r.inventory, item, q);
       if (job.kind === "fabricate" && this.rng() < defectProbability(job.recipe, this.config.defect_rate)) {
         this.stat("defects_made");
         if (r.genome.inspect_parts && !g(r.built_defects, "sensor") && this.rng() < INSPECTION_DETECT_RATE) { this.stat("defects_rejected"); return; }
@@ -998,15 +1117,16 @@ const VN = (() => {
     }
     fleetValue() { return this.alive.length * this.econ.landedCost("robot", this.t); }
     snapshot() {
-      const alive = this.alive, e = this.econ, w = this.world, t = this.t;
+      const alive = this.alive, e = this.econ, w = this.world, t = this.t, b = this.body;
       return {
-        t, sol: Math.floor(t / SOL_TICKS), population: alive.length,
-        chips_in_depot: g(w.imports, "chip"), imports: { ...w.imports }, chips_made: g(this.stats, "chips_made"),
+        t, sol: Math.floor(t / SOL_TICKS), population: alive.length, mtbf: this.config.mtbf,
+        chips_in_depot: g(w.imports, b.vitamin), imports: { ...w.imports }, chips_made: g(this.stats, "chips_made"),
         fabs: w.n_fabs, fab_kits: w.fab_kits, fab_tooling: w.fab_tooling, starved_feedstock: g(this.stats, "starved_feedstock"),
         cash: e.cash, ledger: { ...e.ledger }, manifest: { ...e.manifest },
         in_transit: e.in_transit.map(s => ({ items: s.items, arrives: s.arrives })),
-        landed: { chip: e.landedCost("chip", t), robot: e.landedCost("robot", t), fab_tooling: e.landedCost("fab_tooling", t) },
+        landed: Object.fromEntries(Object.keys(b.catalog).map(k => [k, e.landedCost(k, t)])),
         next_window_sol: Math.floor(e.nextWindow(t) / SOL_TICKS), transit_sols: e.cfg.transit_sols,
+        window_period_sols: e.cfg.window_period_sols,
         offers: e.offers(), active: e.active(),
       };
     }
@@ -1014,17 +1134,20 @@ const VN = (() => {
       const alive = this.alive;
       this.history.push({
         sol: Math.floor(this.t / SOL_TICKS), population: alive.length, fabs: this.world.n_fabs,
-        chips_made: g(this.stats, "chips_made"), cash: this.econ.cash, revenue: g(this.econ.ledger, "contract_revenue"),
-        chips_in_depot: g(this.world.imports, "chip"), fleet_value: this.fleetValue(),
+        chips_made: g(this.stats, "chips_made"), oxygen_t: g(this.stats, "made_oxygen") * this.body.kg_per_unit / 1000,
+        cash: this.econ.cash, revenue: g(this.econ.ledger, "contract_revenue"),
+        chips_in_depot: g(this.world.imports, this.body.vitamin), fleet_value: this.fleetValue(),
       });
     }
   }
 
-  const describe = items => Object.entries(items).filter(([, q]) => q > 0)
-    .map(([k, q]) => `${q} ${label(k)}${q > 1 && !k.endsWith("s") && k !== "fab_tooling" ? "s" : ""}`).join(", ") || "nothing";
+  const describe = (items, body = MARS) => Object.entries(items).filter(([, q]) => q > 0)
+    .map(([k, q]) => {
+      const name = body.label(k);
+      return `${q} ${name}${q > 1 && !/s$|tooling$|oxygen$|regolith$/.test(name) ? "s" : ""}`;
+    }).join(", ") || "nothing";
 
-  return { Sim, HeuristicDirector, CATALOG, ROBOT_BOM, FAB_KIT, FAB_KITS_REQUIRED, SOL_TICKS, RAW,
-    DEFAULT_CONFIG, DEFAULT_ECON, CONTRACT_TYPES, money, label, describe, itemMassKg };
+  return { Sim, HeuristicDirector, BODIES, SOL_TICKS, money, label, describe };
 })();
 
 
@@ -1032,44 +1155,114 @@ const VN = (() => {
 </script>
 <script>
 (() => {
-const { Sim, HeuristicDirector, CATALOG, SOL_TICKS, money, label, describe } = VN;
+const { Sim, HeuristicDirector, BODIES, SOL_TICKS, money, label, describe } = VN;
 const ARM = [{"controller": "scripted", "condition": "clean", "delay_s": 0, "success": 1.0, "time_multiplier": 1.0, "mean_time_s": 3.9}, {"controller": "scripted", "condition": "dusty", "delay_s": 0, "success": 1.0, "time_multiplier": 1.95, "mean_time_s": 7.6}, {"controller": "scripted", "condition": "worn", "delay_s": 0, "success": 1.0, "time_multiplier": 2.12, "mean_time_s": 8.3}, {"controller": "scripted", "condition": "tight", "delay_s": 0, "success": 0.967, "time_multiplier": 1.82, "mean_time_s": 5.3}, {"controller": "scripted", "condition": "harsh", "delay_s": 0, "success": 0.367, "time_multiplier": 10.36, "mean_time_s": 6.9}, {"controller": "learned", "condition": "clean", "delay_s": 0, "success": 1.0, "time_multiplier": 0.97, "mean_time_s": 3.8}, {"controller": "learned", "condition": "dusty", "delay_s": 0, "success": 1.0, "time_multiplier": 2.02, "mean_time_s": 7.9}, {"controller": "learned", "condition": "worn", "delay_s": 0, "success": 1.0, "time_multiplier": 0.84, "mean_time_s": 3.3}, {"controller": "learned", "condition": "tight", "delay_s": 0, "success": 0.933, "time_multiplier": 3.62, "mean_time_s": 10.9}, {"controller": "learned", "condition": "harsh", "delay_s": 0, "success": 0.9, "time_multiplier": 3.11, "mean_time_s": 6.9}, {"controller": "teleop", "condition": "clean", "delay_s": 0, "success": 0.967, "time_multiplier": 3.33, "mean_time_s": 11.4}, {"controller": "teleop", "condition": "clean", "delay_s": 0.5, "success": 0.867, "time_multiplier": 9.53, "mean_time_s": 33.8}, {"controller": "teleop", "condition": "clean", "delay_s": 2.0, "success": 0.0, "time_multiplier": 15.33, "mean_time_s": null}];
 const $ = id => document.getElementById(id);
 const fmtInt = n => Math.round(n).toLocaleString("en-US");
+const cap = t => t[0].toUpperCase() + t.slice(1);
 
-let sim, mode = "auto", running = false, armIdx = 0, lastLog = 0, ended = false;
-const ORDER_ITEMS = ["chip", "robot", "fab_tooling", "motor", "sensor"];
-const ORDER_NOTES = { chip: "electronics module", robot: "complete, 2.5 t", fab_tooling: "first fab needs one", motor: "spare", sensor: "spare" };
+// Text and visuals that differ between bodies. Model numbers live in the engine (BODIES).
+const BODY_UI = {
+  mars: {
+    subtitle: "Self-replicating robot colony, Mars", mapTitle: "Jezero-class site, 48 × 48 km",
+    deposits: { hematite: ["122,46,27", "Hematite"], ice: ["191,230,242", "Ice"] },
+    terrain: [150, 86, 52, 40, 26, 18],
+    orders: [["chip", "electronics module"], ["robot", "complete, 2.5 t"], ["fab_tooling", "first fab needs one"],
+      ["motor", "spare"], ["sensor", "spare"]],
+    launch: [[20000, "$20,000 (early flights)"], [5000, "$5,000"], [1000, "$1,000"], [250, "$250 (mature)"]],
+    launchDefault: 5000,
+    tabs: { import: "Import chips", fab: "Build fab" },
+    output: { title: "Chips made on Mars", get: x => x.chips_made, fmt: v => fmtInt(v), kpi: "Chips made" },
+    notes: {
+      you: "You're the director at mission control on Earth. Commands take a few hours to act on, and wait out the 14-sol solar conjunction blackout.",
+      auto: "Imports chips while that's cheaper, then switches to building chip fabs once the chips still needed (plus revenue lost waiting for launch windows) cost more than fab tooling.",
+      import: "Never builds a fab. Orders chips from Earth every launch window, every 780 sols.",
+      fab: "Lands fab tooling with the first landing, then grows fabs with the fleet. Fabs make tooling for more fabs.",
+    },
+  },
+  moon: {
+    subtitle: "Self-replicating robot colony, the Moon", mapTitle: "South-pole ridge near Shackleton, 48 × 48 km",
+    deposits: { ice: ["191,230,242", "Ice (shadowed craters)"] },
+    terrain: [128, 126, 122, 34, 34, 32],
+    orders: [["chip", "avionics, 9 kg"], ["robot", "complete, 300 kg"], ["anode", "each new MRE cell needs one"],
+      ["mre_cell", "complete, from Earth"], ["motor", "spare"]],
+    launch: [[1000000, "$1M (today's landers)"], [200000, "$200,000"], [20000, "$20,000 (Starship era)"], [5000, "$5,000 (mature)"]],
+    launchDefault: 20000,
+    tabs: { import: "Keep one cell", fab: null },
+    output: { title: "Oxygen made", get: x => x.oxygen_t, fmt: v => `${v.toFixed(v < 10 ? 1 : 0)} t`, kpi: "Oxygen made" },
+    notes: {
+      you: "You're the director at mission control on Earth, 1.3 s away. A flight leaves every 30 days and lands 5 days later. Every robot needs an avionics module from Earth, and every new MRE cell needs an anode.",
+      auto: "Adds an MRE cell for every 6 robots, ordering an anode for each, and orders avionics one doubling ahead. Metal from MRE cells is what limits growth.",
+      import: "Keeps the one MRE cell the colony landed with and orders avionics every flight. Growth stays linear.",
+      fab: "Same as Auto on the Moon.",
+    },
+  },
+};
+
+let sim, body, ui, mode = "auto", running = false, armIdx = 0, lastLog = 0, ended = false;
 
 function storage(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+const day = () => body.day;
+const station = () => body.station.name;
+
+function applyBody(name) {
+  body = BODIES[name]; ui = BODY_UI[name];
+  $("s_body").value = name;
+  $("subtitle").textContent = ui.subtitle;
+  $("mapTitle").textContent = ui.mapTitle;
+  $("dayUnit").textContent = day().toUpperCase();
+  $("stepSol").textContent = `+1 ${day()}`;
+  [...$("speed").options].forEach(o => { o.textContent = `${o.value} ${day()}${+o.value > 1 ? "s" : ""}/frame`; });
+  [...$("s_sols").options].forEach(o => { o.textContent = `${o.value} ${day()}s`; });
+  $("s_launch").innerHTML = ui.launch.map(([v, t]) => `<option value="${v}" ${v === ui.launchDefault ? "selected" : ""}>${t}</option>`).join("");
+  $("l_chips").textContent = `${cap(body.label(body.vitamin))}s on first landing`;
+  $("l_storms").hidden = !body.dust_storms;
+  $("tab_import").textContent = ui.tabs.import;
+  $("tab_fab").hidden = !ui.tabs.fab; if (ui.tabs.fab) $("tab_fab").textContent = ui.tabs.fab;
+  $("l_build_fab").textContent = `Build ${station()}s`;
+  $("l_target_fabs").textContent = `Target ${station()}s`;
+  $("l_fab_share").textContent = `${cap(station())} crew`;
+  $("l_chip_reserve").textContent = `${cap(body.label(body.vitamin))}s held for ${station()} kits`;
+  $("t_chips").textContent = ui.output.title;
+  $("t_fabs").textContent = `${cap(station())}s`;
+  const dep = Object.values(ui.deposits).map(([rgb, name]) => `<span><i class="sq" style="background:rgb(${rgb})"></i>${name}</span>`).join("");
+  $("legend").innerHTML = `
+    <span><i style="background:#f4efe6"></i>Building copies</span>
+    <span><i style="background:#79b8f0"></i>${cap(station())} crew</span>
+    <span><i style="background:#f2c14e"></i>Contract work</span>
+    <span><i style="background:#9aa5b1"></i>Harvesting</span>
+    <span><i style="background:#ef5d52"></i>Self-repair</span>
+    ${dep}
+    <span><i class="sq" style="background:#ffffff;outline:1px solid #888"></i>Base and ${station()}s</span>
+    <span><i class="sq" style="background:#f2c14e;transform:rotate(45deg)"></i>Contract site</span>`;
+  terrain = null;
+  buildOrderRows();
+  storage("vn.body", name);
+}
 
 function newSim() {
-  const sols = +$("s_sols").value, arm = ARM[armIdx] || { success: 1, time_multiplier: 1 };
-  const cfg = { seed: +$("s_seed").value, ticks: sols * SOL_TICKS, seed_chips: +$("s_chips").value,
-    dust_storms: $("s_storms").checked, skill_success: arm.success, skill_time_multiplier: arm.time_multiplier,
-    director_location: "mars" };
+  const days = +$("s_sols").value, arm = ARM[armIdx] || { success: 1, time_multiplier: 1 };
+  const cfg = { body: body.name, seed: +$("s_seed").value, ticks: days * SOL_TICKS, seed_chips: +$("s_chips").value,
+    dust_storms: $("s_storms").checked, skill_success: arm.success, skill_time_multiplier: arm.time_multiplier };
   const econ = { launch_cost_per_kg: +$("s_launch").value };
-  sim = new Sim(cfg, econ, mode === "you" ? null : new HeuristicDirector(mode, 150, cfg.ticks));
+  sim = new Sim(cfg, econ, mode === "you" ? null : new HeuristicDirector(mode, 150, cfg.ticks, body));
   lastLog = 0; ended = false;
   $("log").innerHTML = "";
   $("summary").className = "card summary";
-  $("solOf").textContent = `/ ${sols}`;
-  sim.log("landing", "Landing site ready. Plan the first landing in Earth orders: anything ordered before sol 0 lands with it.");
+  $("solOf").textContent = `/ ${days}`;
+  sim.log("landing", `Landing site ready. Plan the first landing in Earth orders: anything ordered before ${day()} 0 lands with it.`);
   setRunning(false);
   render(true);
 }
 
 function setMode(m) {
+  if (m === "fab" && !ui.tabs.fab) m = "auto";
   mode = m;
   document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
-  if (sim) sim.director = m === "you" ? null : new HeuristicDirector(m, 150, sim.config.ticks);
-  if (sim && m !== "you" && sim.t > 0) sim.director.fabOrdered = sim.world.fab_tooling > 0 || sim.stats.imported_fab_tooling > 0;
-  $("modeNote").textContent = {
-    you: "You're the director, sitting at mission control on Earth. Commands take ~1 tick of light time, and wait out the 14-sol solar conjunction blackout.",
-    auto: "Auto imports chips while that's cheaper, then switches to building fabs once the chips still needed (plus revenue lost waiting for launch windows) cost more than fab tooling.",
-    import: "Never builds a fab. Orders chips from Earth every launch window.",
-    fab: "Lands fab tooling with the first landing, then grows fabs with the fleet.",
-  }[m];
+  if (sim) sim.director = m === "you" ? null : new HeuristicDirector(m, 150, sim.config.ticks, body);
+  if (sim && m !== "you" && sim.t > 0)
+    sim.director.fabOrdered = sim.world.fab_tooling > 0 || (sim.stats[`imported_${body.station.core}`] || 0) > 0;
+  $("modeNote").textContent = ui.notes[m];
   $("policy").disabled = m !== "you"; $("ordersBox").disabled = m !== "you";
   storage("vn.mode", m);
   renderDesk();
@@ -1081,8 +1274,8 @@ function setRunning(r) {
   if (running) requestAnimationFrame(loop);
 }
 
-function advance(sols) {
-  const ticks = Math.max(1, Math.round(sols * SOL_TICKS));
+function advance(days) {
+  const ticks = Math.max(1, Math.round(days * SOL_TICKS));
   for (let i = 0; i < ticks; i++) {
     if (sim.t >= sim.config.ticks) { finish(); break; }
     sim.step();
@@ -1099,14 +1292,14 @@ function finish() {
   if (ended) return;
   ended = true; running = false;
   sim.sample();
-  const s = sim.snapshot(), led = s.ledger;
+  const s = sim.snapshot(), led = s.ledger, h = sim.history[sim.history.length - 1];
   const rows = Object.entries(led).sort((a, b) => a[1] - b[1])
     .map(([k, v]) => `<tr><td>${label(k)}</td><td class="r num ${v < 0 ? "bad-t" : "good-t"}">${money(v)}</td></tr>`).join("");
   const el = $("summary");
-  el.innerHTML = `<h2>Mission complete, sol ${s.sol}</h2>
+  el.innerHTML = `<h2>Mission complete, ${day()} ${s.sol}</h2>
     <p style="margin:8px 0 10px;font-size:15px">Final cash <b class="num">${money(s.cash)}</b> with <b class="num">${s.population}</b> robots,
-    <b class="num">${s.fabs}</b> chip fab${s.fabs === 1 ? "" : "s"} and <b class="num">${fmtInt(s.chips_made)}</b> chips made on Mars.
-    Try the same seed with another director to compare.</p>
+    <b class="num">${s.fabs}</b> ${station()}${s.fabs === 1 ? "" : "s"} and <b class="num">${ui.output.fmt(ui.output.get(h))}</b>
+    ${ui.output.kpi.toLowerCase()}. Try the same seed with another director to compare.</p>
     <div class="scroll"><table><tbody>${rows}<tr><td><b>Starting capital</b></td><td class="r num">${money(sim.econ.cfg.starting_cash)}</td></tr></tbody></table></div>`;
   el.className = "card summary show";
   setRunning(false);
@@ -1127,22 +1320,24 @@ function buildTerrain(size, seed) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = xx + dx, Y = yy + dy; if (X >= 0 && Y >= 0 && X < size && Y < size) { sum += h[Y * size + X]; n++; } }
     h[i] = sum / n;
   }
+  const [r0, g0, b0, rv, gv, bv] = ui.terrain;
   for (let i = 0; i < size * size; i++) {
     const v = (h[i] - 0.5) * 2.4;
-    img.data[i * 4] = 150 + v * 40; img.data[i * 4 + 1] = 86 + v * 26; img.data[i * 4 + 2] = 52 + v * 18; img.data[i * 4 + 3] = 255;
+    img.data[i * 4] = r0 + v * rv; img.data[i * 4 + 1] = g0 + v * gv; img.data[i * 4 + 2] = b0 + v * bv; img.data[i * 4 + 3] = 255;
   }
   x.putImageData(img, 0, 0);
   return c;
 }
 function drawMap() {
   const cv = $("map"), ctx = cv.getContext("2d"), w = sim.world, N = w.size, cell = cv.width / N;
-  if (!terrain || terrain.seed !== sim.config.seed) { terrain = buildTerrain(N, sim.config.seed); terrain.seed = sim.config.seed; }
+  const tkey = `${body.name}|${sim.config.seed}`;
+  if (!terrain || terrain.key !== tkey) { terrain = buildTerrain(N, sim.config.seed); terrain.key = tkey; }
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(terrain, 0, 0, cv.width, cv.height);
-  for (const [rt, color] of [["hematite", "122,46,27"], ["ice", "191,230,242"]]) {
-    for (const [k, amt] of w.deposits[rt]) {
+  for (const [rt, [rgb]] of Object.entries(ui.deposits)) {
+    for (const [k, amt] of w.deposits[rt] || []) {
       const x = Math.floor(k / 1000), y = k % 1000;
-      ctx.fillStyle = `rgba(${color},${Math.min(1, 0.35 + amt / 6000)})`;
+      ctx.fillStyle = `rgba(${rgb},${Math.min(1, 0.35 + amt / 6000)})`;
       ctx.fillRect(x * cell, y * cell, cell, cell);
     }
   }
@@ -1155,7 +1350,7 @@ function drawMap() {
   ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#1b1b1b"; ctx.lineWidth = 2;
   ctx.fillRect((bx - 1) * cell, (by - 1) * cell, cell * 3, cell * 3); ctx.strokeRect((bx - 1) * cell, (by - 1) * cell, cell * 3, cell * 3);
   ctx.fillStyle = "#1b1b1b"; ctx.font = `600 ${Math.round(cell * 1.3)}px "Barlow Condensed", sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(w.n_fabs ? `F${w.n_fabs}` : "B", (bx + .5) * cell, (by + .55) * cell);
+  ctx.fillText(w.n_fabs ? `${body.name === "moon" ? "M" : "F"}${w.n_fabs}` : "B", (bx + .5) * cell, (by + .55) * cell);
   const occ = new Map();
   for (const r of sim.robots) {
     if (!r.alive) continue;
@@ -1165,11 +1360,19 @@ function drawMap() {
     ctx.fillStyle = ROLE_COLOR[r.role] || "#fff";
     ctx.beginPath(); ctx.arc(r.pos[0] * cell + cell * .27 + ox, r.pos[1] * cell + cell * .27 + oy, cell * .26, 0, Math.PI * 2); ctx.fill();
   }
-  const sun = w.solarFactor(sim.t) / Math.PI;
-  const night = Math.max(0, 0.45 - sun * 0.6);
-  if (night > 0) { ctx.fillStyle = `rgba(8,14,30,${night})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+  let light;
+  if (body.sunlight === "polar") {
+    const dark = w.dark(sim.t);
+    if (dark) { ctx.fillStyle = "rgba(6,8,16,0.55)"; ctx.fillRect(0, 0, cv.width, cv.height); }
+    light = dark ? "Terrain shadow: no sun" : "Sunlit";
+  } else {
+    const sun = w.solarFactor(sim.t) / Math.PI;
+    const night = Math.max(0, 0.45 - sun * 0.6);
+    if (night > 0) { ctx.fillStyle = `rgba(8,14,30,${night})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+    light = sun > 0.05 ? "Day" : "Night";
+  }
   if (w.storm(sim.t)) { ctx.fillStyle = "rgba(214,140,70,0.38)"; ctx.fillRect(0, 0, cv.width, cv.height); }
-  $("mapnote").textContent = `${w.storm(sim.t) ? "Dust storm · " : ""}${sun > 0.05 ? "Day" : "Night"} · ${fmtInt(sim.population)} robots`;
+  $("mapnote").textContent = `${w.storm(sim.t) ? "Dust storm · " : ""}${light} · ${fmtInt(sim.population)} robots`;
 }
 
 function chart(id, values, color, fmt) {
@@ -1186,7 +1389,7 @@ function chart(id, values, color, fmt) {
   for (let i = 0; i <= 2; i++) { const y = pad.t + ih * i / 2; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke(); }
   ctx.fillStyle = muted; ctx.font = "10.5px 'IBM Plex Mono', monospace"; ctx.textBaseline = "top";
   ctx.textAlign = "left"; ctx.fillText(fmt(hi), pad.l + 2, pad.t + 2);
-  ctx.textAlign = "left"; ctx.fillText("sol 0", pad.l, H - 12); ctx.textAlign = "right"; ctx.fillText(`${maxSol}`, W - pad.r, H - 12);
+  ctx.textAlign = "left"; ctx.fillText(`${day()} 0`, pad.l, H - 12); ctx.textAlign = "right"; ctx.fillText(`${maxSol}`, W - pad.r, H - 12);
   if (values.length < 2) return;
   const X = s => pad.l + iw * s / maxSol, Y = v => pad.t + ih * (1 - (v - lo) / (hi - lo));
   ctx.beginPath(); values.forEach(([s, v], i) => i ? ctx.lineTo(X(s), Y(v)) : ctx.moveTo(X(s), Y(v)));
@@ -1198,22 +1401,28 @@ function chart(id, values, color, fmt) {
   ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(ls), Y(lv), 3, 0, Math.PI * 2); ctx.fill();
 }
 
+function liveSample(s) {
+  return { sol: s.sol, population: s.population, cash: s.cash, chips_made: s.chips_made, fabs: s.fabs,
+    oxygen_t: (sim.stats.made_oxygen || 0) * body.kg_per_unit / 1000 };
+}
+
 function renderKpis(s) {
-  const e = sim.econ, inConj = sim.inConjunction(sim.t);
+  const e = sim.econ, kr = sim.world.kits_required, shells = Math.floor(s.fab_kits / kr);
   const k = [
     ["Robots", fmtInt(s.population)],
     ["Cash", money(s.cash)],
     ["Revenue", money(s.ledger.contract_revenue || 0)],
-    ["Chips in depot", fmtInt(s.chips_in_depot)],
-    ["Chips made", fmtInt(s.chips_made)],
-    ["Fabs", `${s.fabs}${s.fab_kits % 4 || (s.fab_kits / 4 > s.fabs) ? ` · ${s.fab_kits} kits` : ""}`],
+    [`${cap(body.label(body.vitamin))}s in depot`, fmtInt(s.chips_in_depot)],
+    [ui.output.kpi, ui.output.fmt(ui.output.get(liveSample(s)))],
+    [`${cap(station())}s`, `${s.fabs}${s.fab_kits % kr || shells > s.fabs ? ` · ${s.fab_kits} kits` : ""}`],
     ["Launch $/kg", fmtInt(e.launchCostPerKg(sim.t))],
-    ["Next window", `sol ${s.next_window_sol}`],
+    [body.name === "moon" ? "Next flight" : "Next window", `${day()} ${s.next_window_sol}`],
   ];
   $("kpis").innerHTML = k.map(([a, b]) => `<div class="kpi"><span>${a}</span><b>${b}</b></div>`).join("");
   const pills = [];
   if (sim.world.storm(sim.t)) pills.push(`<span class="pill warn">Dust storm</span>`);
-  if (inConj) pills.push(`<span class="pill bad">Comms blackout</span>`);
+  if (sim.world.dark(sim.t)) pills.push(`<span class="pill warn">Polar shadow</span>`);
+  if (sim.inConjunction(sim.t)) pills.push(`<span class="pill bad">Comms blackout</span>`);
   if (s.in_transit.length) pills.push(`<span class="pill">${s.in_transit.length} ship${s.in_transit.length > 1 ? "s" : ""} in transit</span>`);
   if (sim.pending.length) pills.push(`<span class="pill warn">${sim.pending.length} command${sim.pending.length > 1 ? "s" : ""} queued</span>`);
   const arm = ARM[armIdx]; if (arm) pills.push(`<span class="pill">${arm.controller} arm · ${arm.condition}${arm.delay_s ? ` · ${arm.delay_s}s` : ""}</span>`);
@@ -1228,40 +1437,45 @@ function renderDesk() {
     $("p_target_fabs").value = p.target_fabs ?? 1; $("p_fab_share").value = p.fab_share ?? 0.5;
     $("p_contract_share").value = p.contract_share || 0; $("p_chip_reserve").value = p.chip_reserve || 0;
   }
+  $("p_target_fabs").max = body.name === "moon" ? 60 : 12;
   $("v_target_fabs").textContent = $("p_target_fabs").value;
   $("v_fab_share").textContent = `${Math.round($("p_fab_share").value * 100)}%`;
   $("v_contract_share").textContent = `${Math.round($("p_contract_share").value * 100)}%`;
   $("v_chip_reserve").textContent = $("p_chip_reserve").value;
-  // orders
   const t = sim.t, e = sim.econ;
-  ORDER_ITEMS.forEach(item => {
+  ui.orders.forEach(([item]) => {
     const cell = document.getElementById(`lc_${item}`);
     if (cell) cell.textContent = money(e.landedCost(item, t));
   });
   updateOrderTotal();
   const nw = Math.floor(e.nextWindow(t) / SOL_TICKS);
-  $("windowNote").textContent = t === 0 ? "Before sol 0: orders land with the first landing" :
-    `Next launch window sol ${nw}, lands sol ${nw + e.cfg.transit_sols}`;
-  const man = Object.keys(e.manifest).length ? describe(e.manifest) : "empty";
-  const transit = e.in_transit.map(s => `${describe(s.items)} (lands sol ${Math.floor(s.arrives / SOL_TICKS)})`).join("; ");
+  $("windowNote").textContent = t === 0 ? `Before ${day()} 0: orders land with the first landing` :
+    `Next ${body.name === "moon" ? "flight" : "launch window"} ${day()} ${nw}, lands ${day()} ${nw + e.cfg.transit_sols}`;
+  const man = Object.keys(e.manifest).length ? describe(e.manifest, body) : "empty";
+  const transit = e.in_transit.map(s => `${describe(s.items, body)} (lands ${day()} ${Math.floor(s.arrives / SOL_TICKS)})`).join("; ");
   $("manifestNote").textContent = `Manifest: ${man}.${transit ? ` In transit: ${transit}.` : ""}`;
   renderContracts();
 }
-function orderQty() { const o = {}; ORDER_ITEMS.forEach(i => { const v = Math.max(0, Math.floor(+$(`q_${i}`).value || 0)); if (v) o[i] = v; }); return o; }
+function orderQty() {
+  const o = {};
+  ui.orders.forEach(([i]) => { const v = Math.max(0, Math.floor(+$(`q_${i}`).value || 0)); if (v) o[i] = v; });
+  return o;
+}
 function updateOrderTotal() {
   const o = orderQty(), cost = Object.keys(o).length ? sim.econ.manifestCost(o, sim.t) : 0;
-  $("orderTotal").textContent = cost ? `This order: ${money(cost)} incl. $10M per shipment · cash ${money(sim.econ.cash)}` : `Cash ${money(sim.econ.cash)}`;
+  const fixed = money(sim.econ.cfg.shipment_fixed_cost);
+  $("orderTotal").textContent = cost ? `This order: ${money(cost)} incl. ${fixed} per shipment · cash ${money(sim.econ.cash)}` : `Cash ${money(sim.econ.cash)}`;
 }
 function renderContracts() {
   const e = sim.econ, t = sim.t, you = mode === "you";
   const card = (c, active) => {
     const rem = e.remaining(c), req = c.requirements;
     const total = Object.values(req).reduce((a, b) => a + b, 0), left = Object.values(rem).reduce((a, b) => a + b, 0);
-    const solsLeft = Math.floor((c.deadline - t) / SOL_TICKS);
-    const needs = Object.entries(req).map(([k, q]) => `${q} ${label(k)}`).join(", ");
-    return `<div class="contract ${active && solsLeft < 40 ? "late" : ""}">
+    const daysLeft = Math.floor((c.deadline - t) / SOL_TICKS);
+    const needs = Object.entries(req).map(([k, q]) => `${q} ${body.label(k)}`).join(", ");
+    return `<div class="contract ${active && daysLeft < 40 ? "late" : ""}">
       <div><div class="what">${label(c.kind)} <span class="num" style="font-weight:500">${money(c.payment)}</span></div>
-      <div class="meta">${c.client} · ${needs} · ${active ? `${solsLeft} sols left` : `deadline in ${solsLeft} sols`}</div></div>
+      <div class="meta">${c.client} · ${needs} · ${active ? `${daysLeft} ${day()}s left` : `deadline in ${daysLeft} ${day()}s`}</div></div>
       ${active ? `<span class="num note">${Math.round(100 * (total - left) / total)}%</span>` :
         `<button data-accept="${c.id}" ${you ? "" : "disabled"}>Accept</button>`}
       ${active ? `<div class="progress"><div style="width:${100 * (total - left) / total}%"></div></div>` : ""}
@@ -1269,12 +1483,12 @@ function renderContracts() {
   };
   const act = e.active(), off = e.offers().slice(-8).reverse();
   $("contracts").innerHTML = (act.length ? act.map(c => card(c, true)).join("") : `<p class="note">No active contracts.</p>`) +
-    (off.length ? `<p class="note" style="margin-top:4px">Offers (expire after 30 sols)</p>` + off.map(c => card(c, false)).join("") : "");
+    (off.length ? `<p class="note" style="margin-top:4px">Offers (expire after 30 ${day()}s)</p>` + off.map(c => card(c, false)).join("") : "");
 }
 function renderLog() {
   const box = $("log"), evs = sim.events;
   if (evs.length === lastLog) return;
-  const frag = evs.slice(lastLog).map(ev => `<div class="k-${ev.kind}"><span class="sol">sol ${ev.sol}</span><span>${ev.text}</span></div>`).join("");
+  const frag = evs.slice(lastLog).map(ev => `<div class="k-${ev.kind}"><span class="sol">${day()} ${ev.sol}</span><span>${ev.text}</span></div>`).join("");
   lastLog = evs.length;
   box.insertAdjacentHTML("afterbegin", frag.split("</div>").filter(Boolean).reverse().map(x => x + "</div>").join(""));
   while (box.children.length > 120) box.lastChild.remove();
@@ -1286,22 +1500,22 @@ function render(force) {
   drawMap();
   if (force || frame++ % 3 === 0) {
     renderKpis(s); renderDesk(); renderLog();
-    const h = sim.history.concat([{ sol: s.sol, population: s.population, cash: s.cash, chips_made: s.chips_made, fabs: s.fabs }]);
+    const h = sim.history.concat([liveSample(s)]);
     const css = getComputedStyle(document.documentElement);
     chart("ch_pop", h.map(x => [x.sol, x.population]), css.getPropertyValue("--ochre").trim(), v => fmtInt(v));
     chart("ch_cash", h.map(x => [x.sol, x.cash]), css.getPropertyValue("--accent").trim(), money);
-    chart("ch_chips", h.map(x => [x.sol, x.chips_made]), css.getPropertyValue("--good").trim(), v => fmtInt(v));
+    chart("ch_chips", h.map(x => [x.sol, ui.output.get(x)]), css.getPropertyValue("--good").trim(), ui.output.fmt);
     chart("ch_fabs", h.map(x => [x.sol, x.fabs]), css.getPropertyValue("--ink").trim(), v => fmtInt(v));
     $("c_pop").textContent = fmtInt(s.population); $("c_cash").textContent = money(s.cash);
-    $("c_chips").textContent = fmtInt(s.chips_made); $("c_fabs").textContent = s.fabs;
+    $("c_chips").textContent = ui.output.fmt(ui.output.get(h[h.length - 1])); $("c_fabs").textContent = s.fabs;
   }
 }
 
 // ---- wiring -------------------------------------------------------------------
 function buildOrderRows() {
-  $("orderRows").innerHTML = ORDER_ITEMS.map(i => `<tr><td>${label(i)}<div class="note">${ORDER_NOTES[i]}</div></td>
-    <td class="r num" id="lc_${i}"></td><td class="r"><input type="number" id="q_${i}" min="0" max="500" value="0" aria-label="${label(i)} quantity"></td></tr>`).join("");
-  ORDER_ITEMS.forEach(i => $(`q_${i}`).addEventListener("input", updateOrderTotal));
+  $("orderRows").innerHTML = ui.orders.map(([i, note]) => `<tr><td>${body.label(i)}<div class="note">${note}</div></td>
+    <td class="r num" id="lc_${i}"></td><td class="r"><input type="number" id="q_${i}" min="0" max="500" value="0" aria-label="${body.label(i)} quantity"></td></tr>`).join("");
+  ui.orders.forEach(([i]) => $(`q_${i}`).addEventListener("input", updateOrderTotal));
 }
 function buildArmRows() {
   $("armRows").innerHTML = ARM.map((a, i) => {
@@ -1316,6 +1530,7 @@ document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click
 $("play").addEventListener("click", () => setRunning(!running));
 $("stepSol").addEventListener("click", () => { if (!ended) { advance(1); render(true); } });
 $("restart").addEventListener("click", () => newSim());
+$("s_body").addEventListener("change", () => { applyBody($("s_body").value); newSim(); setMode(mode); });
 $("armRows").addEventListener("click", e => {
   const tr = e.target.closest("tr[data-arm]"); if (!tr) return;
   armIdx = +tr.dataset.arm; storage("vn.arm", String(armIdx)); buildArmRows(); render(true);
@@ -1334,8 +1549,10 @@ policyInputs.forEach(id => $(id).addEventListener("input", () => renderDesk()));
 $("placeOrder").addEventListener("click", () => {
   const o = orderQty(); if (!Object.keys(o).length) return;
   sim.command({ orders: o });
-  sim.log("comms", `Ordered ${describe(o)}${sim.t === 0 ? " for the first landing" : ` for the sol ${Math.floor(sim.econ.nextWindow(sim.t) / SOL_TICKS)} window`}`);
-  ORDER_ITEMS.forEach(i => $(`q_${i}`).value = 0);
+  const when = sim.t === 0 ? " for the first landing" :
+    ` for the ${day()} ${Math.floor(sim.econ.nextWindow(sim.t) / SOL_TICKS)} ${body.name === "moon" ? "flight" : "window"}`;
+  sim.log("comms", `Ordered ${describe(o, body)}${when}`);
+  ui.orders.forEach(([i]) => $(`q_${i}`).value = 0);
   render(true);
 });
 $("contracts").addEventListener("click", e => {
@@ -1346,11 +1563,13 @@ $("contracts").addEventListener("click", e => {
 window.addEventListener("resize", () => sim && render(true));
 
 const savedArm = +storage("vn.arm"); if (savedArm >= 0 && savedArm < ARM.length) armIdx = savedArm;
-const savedMode = storage("vn.mode");
-buildOrderRows(); buildArmRows();
+const savedMode = storage("vn.mode"), savedBody = storage("vn.body");
+applyBody(BODIES[savedBody] ? savedBody : "mars");
+buildArmRows();
 mode = ["you", "auto", "import", "fab"].includes(savedMode) ? savedMode : "auto";
 newSim(); setMode(mode);
-// Open on a working colony when a strategy is in charge; as director you start at sol 0 to plan the first landing.
+// Open on a working colony when a strategy is in charge; as director you start at day 0 to plan the first landing.
 if (mode !== "you") { advance(120); render(true); }
 })();
+
 </script>
