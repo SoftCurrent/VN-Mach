@@ -76,6 +76,10 @@ more robots and more stations.
 
 ### R: universal robot (about 300 kg)
 
+![Lunar replicator robot, side view with parts list](lunar_robot.png)
+
+Drawn from the simulator's parts list by `docs/make_robot_drawing.py`.
+
 | Subsystem | Design | Made from | Local? |
 |---|---|---|---|
 | Frame | Bolted box truss of 4 identical cast beams + 2 end plates | cast iron / Fe-Si | yes |

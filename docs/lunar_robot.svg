@@ -1,0 +1,260 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1660 900" width="1660" height="900"
+     font-family="Inter, DejaVu Sans, sans-serif">
+<defs>
+  <pattern id="mesh" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="14" height="14" fill="#f4f5f6"/>
+    <line x1="0" y1="0" x2="0" y2="14" stroke="#4b5157" stroke-width="2.4"/>
+    <line x1="0" y1="0" x2="14" y2="0" stroke="#4b5157" stroke-width="2.4"/>
+  </pattern>
+</defs>
+<rect width="1660" height="900" fill="#f4f5f6"/>
+<text x="40" y="60" font-size="34" font-weight="700" fill="#1d2329">Lunar replicator robot</text>
+<text x="40" y="92" font-size="17" fill="#5f6871">Side view. ~300 kg, 1.8 m long, built from regolith by robots like itself, plus one avionics module from Earth.</text>
+<line x1="1080" y1="120" x2="1080" y2="860" stroke="#dfe2e6" stroke-width="2"/>
+<rect x="0" y="770" width="1080" height="70" fill="#c9c6c0"/>
+<line x1="0" y1="770" x2="1080" y2="770" stroke="#a9a59e" stroke-width="3"/>
+<ellipse cx="70" cy="772" rx="23.0" ry="8.0" fill="#a9a59e"/>
+<ellipse cx="470" cy="772" rx="14.0" ry="5.0" fill="#a9a59e"/>
+<ellipse cx="1010" cy="772" rx="27.0" ry="10.0" fill="#a9a59e"/>
+<ellipse cx="880" cy="772" rx="10.0" ry="4.0" fill="#a9a59e"/>
+<g opacity="0.45">
+<circle cx="334" cy="658.0" r="81.0" fill="url(#mesh)" stroke="#4b5157" stroke-width="6"/>
+<line x1="412.0" y1="658.0" x2="424.0" y2="658.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="401.5" y1="697.0" x2="411.9" y2="703.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="373.0" y1="725.5" x2="379.0" y2="735.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="334.0" y1="736.0" x2="334.0" y2="748.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="295.0" y1="725.5" x2="289.0" y2="735.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="266.5" y1="697.0" x2="256.1" y2="703.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="256.0" y1="658.0" x2="244.0" y2="658.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="266.5" y1="619.0" x2="256.1" y2="613.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="295.0" y1="590.5" x2="289.0" y2="580.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="334.0" y1="580.0" x2="334.0" y2="568.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="373.0" y1="590.5" x2="379.0" y2="580.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="401.5" y1="619.0" x2="411.9" y2="613.0" stroke="#4b5157" stroke-width="7"/>
+<circle cx="334" cy="658.0" r="38" fill="#4b5157"/>
+<circle cx="334" cy="658.0" r="24" fill="#5e7389" stroke="#1d2329" stroke-width="1.5"/>
+<line x1="344.0" y1="658.0" x2="356.0" y2="658.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="339.0" y1="666.7" x2="345.0" y2="677.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="329.0" y1="666.7" x2="323.0" y2="677.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="324.0" y1="658.0" x2="312.0" y2="658.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="329.0" y1="649.3" x2="323.0" y2="638.9" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="339.0" y1="649.3" x2="345.0" y2="638.9" stroke="#b8c3cd" stroke-width="3"/>
+<circle cx="334" cy="658.0" r="6" fill="#b8c3cd"/>
+</g>
+<g opacity="0.45">
+<circle cx="724" cy="658.0" r="81.0" fill="url(#mesh)" stroke="#4b5157" stroke-width="6"/>
+<line x1="802.0" y1="658.0" x2="814.0" y2="658.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="791.5" y1="697.0" x2="801.9" y2="703.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="763.0" y1="725.5" x2="769.0" y2="735.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="724.0" y1="736.0" x2="724.0" y2="748.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="685.0" y1="725.5" x2="679.0" y2="735.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="656.5" y1="697.0" x2="646.1" y2="703.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="646.0" y1="658.0" x2="634.0" y2="658.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="656.5" y1="619.0" x2="646.1" y2="613.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="685.0" y1="590.5" x2="679.0" y2="580.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="724.0" y1="580.0" x2="724.0" y2="568.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="763.0" y1="590.5" x2="769.0" y2="580.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="791.5" y1="619.0" x2="801.9" y2="613.0" stroke="#4b5157" stroke-width="7"/>
+<circle cx="724" cy="658.0" r="38" fill="#4b5157"/>
+<circle cx="724" cy="658.0" r="24" fill="#5e7389" stroke="#1d2329" stroke-width="1.5"/>
+<line x1="734.0" y1="658.0" x2="746.0" y2="658.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="729.0" y1="666.7" x2="735.0" y2="677.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="719.0" y1="666.7" x2="713.0" y2="677.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="714.0" y1="658.0" x2="702.0" y2="658.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="719.0" y1="649.3" x2="713.0" y2="638.9" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="729.0" y1="649.3" x2="735.0" y2="638.9" stroke="#b8c3cd" stroke-width="3"/>
+<circle cx="724" cy="658.0" r="6" fill="#b8c3cd"/>
+</g>
+<rect x="225" y="520" width="535" height="80" fill="none"/>
+<rect x="225" y="520" width="535" height="18" fill="#4b5157" stroke="#1d2329" stroke-width="2"/>
+<rect x="225" y="582" width="535" height="18" fill="#4b5157" stroke="#1d2329" stroke-width="2"/>
+<line x1="285" y1="538" x2="345" y2="582" stroke="#4b5157" stroke-width="10"/>
+<line x1="380" y1="538" x2="440" y2="582" stroke="#4b5157" stroke-width="10"/>
+<line x1="475" y1="538" x2="535" y2="582" stroke="#4b5157" stroke-width="10"/>
+<line x1="570" y1="538" x2="630" y2="582" stroke="#4b5157" stroke-width="10"/>
+<line x1="665" y1="538" x2="725" y2="582" stroke="#4b5157" stroke-width="10"/>
+<rect x="225" y="510" width="22" height="100" rx="3" fill="#5e7389" stroke="#1d2329" stroke-width="2"/>
+<rect x="738" y="510" width="22" height="100" rx="3" fill="#5e7389" stroke="#1d2329" stroke-width="2"/>
+<circle cx="265" cy="529" r="3" fill="#b8c3cd"/>
+<circle cx="265" cy="591" r="3" fill="#b8c3cd"/>
+<circle cx="335" cy="529" r="3" fill="#b8c3cd"/>
+<circle cx="335" cy="591" r="3" fill="#b8c3cd"/>
+<circle cx="405" cy="529" r="3" fill="#b8c3cd"/>
+<circle cx="405" cy="591" r="3" fill="#b8c3cd"/>
+<circle cx="475" cy="529" r="3" fill="#b8c3cd"/>
+<circle cx="475" cy="591" r="3" fill="#b8c3cd"/>
+<circle cx="545" cy="529" r="3" fill="#b8c3cd"/>
+<circle cx="545" cy="591" r="3" fill="#b8c3cd"/>
+<circle cx="615" cy="529" r="3" fill="#b8c3cd"/>
+<circle cx="615" cy="591" r="3" fill="#b8c3cd"/>
+<circle cx="685" cy="529" r="3" fill="#b8c3cd"/>
+<circle cx="685" cy="591" r="3" fill="#b8c3cd"/>
+<path d="M260,600 L300,680.0 L340,600" fill="none" stroke="#4b5157" stroke-width="12" stroke-linejoin="round"/>
+<path d="M650,600 L690,680.0 L730,600" fill="none" stroke="#4b5157" stroke-width="12" stroke-linejoin="round"/>
+<rect x="430" y="544" width="110" height="40" rx="4" fill="#d9822b" stroke="#1d2329" stroke-width="2"/>
+<text x="485" y="569" text-anchor="middle" font-size="12" font-weight="700" fill="#1d2329">AVIONICS</text>
+<rect x="300" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="318" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="336" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="354" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="372" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="390" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="408" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="426" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="444" y="474" width="8" height="46" fill="#b8c3cd" stroke="#5f6871" stroke-width="1"/>
+<rect x="296" y="514" width="164" height="6" fill="#b8c3cd"/>
+<rect x="554" y="410" width="12" height="110" fill="#5e7389" stroke="#1d2329" stroke-width="1.5"/>
+<rect x="514" y="378" width="92" height="34" rx="6" fill="#d9822b" stroke="#1d2329" stroke-width="2"/>
+<circle cx="536" cy="395" r="10" fill="#1d2329"/><circle cx="536" cy="395" r="4" fill="#bfe3ea"/>
+<circle cx="584" cy="395" r="10" fill="#1d2329"/><circle cx="584" cy="395" r="4" fill="#bfe3ea"/>
+<path d="M546,378 a14,14 0 0 1 28,0 z" fill="#bfe3ea" stroke="#1d2329" stroke-width="2"/>
+<path d="M170,589 C120,690 70,740 0,764" fill="none" stroke="#b8c3cd" stroke-width="7"/>
+<path d="M170,589 C120,690 70,740 0,764" fill="none" stroke="#1d2329" stroke-width="1" stroke-dasharray="10 6"/>
+<line x1="170" y1="545" x2="225" y2="545" stroke="#4b5157" stroke-width="14"/>
+<circle cx="170" cy="545" r="46" fill="#b8c3cd" stroke="#1d2329" stroke-width="2.5"/>
+<circle cx="170" cy="545" r="36" fill="none" stroke="#5f6871" stroke-width="2"/>
+<circle cx="170" cy="545" r="27" fill="none" stroke="#5f6871" stroke-width="2"/>
+<circle cx="170" cy="545" r="18" fill="none" stroke="#5f6871" stroke-width="2"/>
+<circle cx="170" cy="545" r="9" fill="#4b5157"/>
+<g opacity="1.0">
+<circle cx="300" cy="680.0" r="81.0" fill="url(#mesh)" stroke="#4b5157" stroke-width="6"/>
+<line x1="378.0" y1="680.0" x2="390.0" y2="680.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="367.5" y1="719.0" x2="377.9" y2="725.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="339.0" y1="747.5" x2="345.0" y2="757.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="300.0" y1="758.0" x2="300.0" y2="770.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="261.0" y1="747.5" x2="255.0" y2="757.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="232.5" y1="719.0" x2="222.1" y2="725.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="222.0" y1="680.0" x2="210.0" y2="680.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="232.5" y1="641.0" x2="222.1" y2="635.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="261.0" y1="612.5" x2="255.0" y2="602.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="300.0" y1="602.0" x2="300.0" y2="590.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="339.0" y1="612.5" x2="345.0" y2="602.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="367.5" y1="641.0" x2="377.9" y2="635.0" stroke="#4b5157" stroke-width="7"/>
+<circle cx="300" cy="680.0" r="38" fill="#4b5157"/>
+<circle cx="300" cy="680.0" r="24" fill="#5e7389" stroke="#1d2329" stroke-width="1.5"/>
+<line x1="310.0" y1="680.0" x2="322.0" y2="680.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="305.0" y1="688.7" x2="311.0" y2="699.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="295.0" y1="688.7" x2="289.0" y2="699.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="290.0" y1="680.0" x2="278.0" y2="680.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="295.0" y1="671.3" x2="289.0" y2="660.9" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="305.0" y1="671.3" x2="311.0" y2="660.9" stroke="#b8c3cd" stroke-width="3"/>
+<circle cx="300" cy="680.0" r="6" fill="#b8c3cd"/>
+</g>
+<g opacity="1.0">
+<circle cx="690" cy="680.0" r="81.0" fill="url(#mesh)" stroke="#4b5157" stroke-width="6"/>
+<line x1="768.0" y1="680.0" x2="780.0" y2="680.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="757.5" y1="719.0" x2="767.9" y2="725.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="729.0" y1="747.5" x2="735.0" y2="757.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="690.0" y1="758.0" x2="690.0" y2="770.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="651.0" y1="747.5" x2="645.0" y2="757.9" stroke="#4b5157" stroke-width="7"/>
+<line x1="622.5" y1="719.0" x2="612.1" y2="725.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="612.0" y1="680.0" x2="600.0" y2="680.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="622.5" y1="641.0" x2="612.1" y2="635.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="651.0" y1="612.5" x2="645.0" y2="602.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="690.0" y1="602.0" x2="690.0" y2="590.0" stroke="#4b5157" stroke-width="7"/>
+<line x1="729.0" y1="612.5" x2="735.0" y2="602.1" stroke="#4b5157" stroke-width="7"/>
+<line x1="757.5" y1="641.0" x2="767.9" y2="635.0" stroke="#4b5157" stroke-width="7"/>
+<circle cx="690" cy="680.0" r="38" fill="#4b5157"/>
+<circle cx="690" cy="680.0" r="24" fill="#5e7389" stroke="#1d2329" stroke-width="1.5"/>
+<line x1="700.0" y1="680.0" x2="712.0" y2="680.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="695.0" y1="688.7" x2="701.0" y2="699.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="685.0" y1="688.7" x2="679.0" y2="699.1" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="680.0" y1="680.0" x2="668.0" y2="680.0" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="685.0" y1="671.3" x2="679.0" y2="660.9" stroke="#b8c3cd" stroke-width="3"/>
+<line x1="695.0" y1="671.3" x2="701.0" y2="660.9" stroke="#b8c3cd" stroke-width="3"/>
+<circle cx="690" cy="680.0" r="6" fill="#b8c3cd"/>
+</g>
+<rect x="691" y="494" width="68" height="26" rx="5" fill="#4b5157" stroke="#1d2329" stroke-width="2"/>
+<line x1="725" y1="458" x2="865" y2="318" stroke="#1d2329" stroke-width="26" stroke-linecap="round"/><line x1="725" y1="458" x2="865" y2="318" stroke="#5e7389" stroke-width="22" stroke-linecap="round"/><line x1="725" y1="458" x2="865" y2="318" stroke="#b8c3cd" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+<line x1="865" y1="318" x2="985" y2="560" stroke="#1d2329" stroke-width="26" stroke-linecap="round"/><line x1="865" y1="318" x2="985" y2="560" stroke="#5e7389" stroke-width="22" stroke-linecap="round"/><line x1="865" y1="318" x2="985" y2="560" stroke="#b8c3cd" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+<line x1="985" y1="560" x2="990" y2="640" stroke="#1d2329" stroke-width="20" stroke-linecap="round"/><line x1="985" y1="560" x2="990" y2="640" stroke="#5e7389" stroke-width="16" stroke-linecap="round"/><line x1="985" y1="560" x2="990" y2="640" stroke="#b8c3cd" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+<path d="M958,640 L1030,640 L1048,700 Q1000,724 948,700 Z" fill="#4b5157" stroke="#1d2329" stroke-width="2.5"/>
+<path d="M972,646 L1026,646" stroke="#b8c3cd" stroke-width="3"/>
+<circle cx="725" cy="458" r="26" fill="#4b5157" stroke="#1d2329" stroke-width="2"/><circle cx="725" cy="458" r="17" fill="#5e7389"/><circle cx="725" cy="458" r="5" fill="#b8c3cd"/>
+<circle cx="865" cy="318" r="26" fill="#4b5157" stroke="#1d2329" stroke-width="2"/><circle cx="865" cy="318" r="17" fill="#5e7389"/><circle cx="865" cy="318" r="5" fill="#b8c3cd"/>
+<circle cx="985" cy="560" r="26" fill="#4b5157" stroke="#1d2329" stroke-width="2"/><circle cx="985" cy="560" r="17" fill="#5e7389"/><circle cx="985" cy="560" r="5" fill="#b8c3cd"/>
+<circle cx="725" cy="498" r="20" fill="#4b5157" stroke="#1d2329" stroke-width="2"/><circle cx="725" cy="498" r="11" fill="#5e7389"/><circle cx="725" cy="498" r="5" fill="#b8c3cd"/>
+<path d="M245,550 H730 Q750,550 750,500 L743,468" fill="none" stroke="#bfe3ea" stroke-width="5" stroke-dasharray="1 0"/>
+<path d="M739,458 L875,334 L999,552" fill="none" stroke="#bfe3ea" stroke-width="4"/>
+<g transform="translate(40,810)"><rect x="0" y="0" width="150" height="8" fill="#1d2329"/><rect x="150" y="0" width="150" height="8" fill="#f4f5f6" stroke="#1d2329" stroke-width="1.5"/><text x="0" y="24" font-size="13" fill="#1d2329">0</text><text x="150" y="24" font-size="13" text-anchor="middle" fill="#1d2329">0.5</text><text x="300" y="24" font-size="13" text-anchor="end" fill="#1d2329">1 m</text></g>
+<line x1="330" y1="591" x2="330" y2="315" stroke="#1d2329" stroke-width="1.3"/><circle cx="330" cy="591" r="4" fill="#1d2329"/><circle cx="330" cy="315" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="330" y="320.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">1</text>
+<line x1="240" y1="720.0" x2="150" y2="720" stroke="#1d2329" stroke-width="1.3"/><circle cx="240" cy="720.0" r="4" fill="#1d2329"/><circle cx="150" cy="720" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="150" y="725.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">2</text>
+<line x1="690" y1="680.0" x2="580" y2="700" stroke="#1d2329" stroke-width="1.3"/><circle cx="690" cy="680.0" r="4" fill="#1d2329"/><circle cx="580" cy="700" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="580" y="705.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">3</text>
+<line x1="720" y1="706.0" x2="780" y2="735" stroke="#1d2329" stroke-width="1.3"/><circle cx="720" cy="706.0" r="4" fill="#1d2329"/><circle cx="780" cy="735" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="780" y="740.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">4</text>
+<line x1="800" y1="404" x2="760" y2="300" stroke="#1d2329" stroke-width="1.3"/><circle cx="800" cy="404" r="4" fill="#1d2329"/><circle cx="760" cy="300" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="760" y="305.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">5</text>
+<line x1="865" y1="318" x2="930" y2="260" stroke="#1d2329" stroke-width="1.3"/><circle cx="865" cy="318" r="4" fill="#1d2329"/><circle cx="930" cy="260" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="930" y="265.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">6</text>
+<line x1="170" y1="499" x2="130" y2="430" stroke="#1d2329" stroke-width="1.3"/><circle cx="170" cy="499" r="4" fill="#1d2329"/><circle cx="130" cy="430" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="130" y="435.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">7</text>
+<line x1="380" y1="474" x2="420" y2="330" stroke="#1d2329" stroke-width="1.3"/><circle cx="380" cy="474" r="4" fill="#1d2329"/><circle cx="420" cy="330" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="420" y="335.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">8</text>
+<line x1="485" y1="544" x2="505" y2="470" stroke="#1d2329" stroke-width="1.3"/><circle cx="485" cy="544" r="4" fill="#1d2329"/><circle cx="505" cy="470" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="505" y="475.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">9</text>
+<line x1="560" y1="378" x2="640" y2="330" stroke="#1d2329" stroke-width="1.3"/><circle cx="560" cy="378" r="4" fill="#1d2329"/><circle cx="640" cy="330" r="15" fill="#f4f5f6" stroke="#1d2329" stroke-width="2"/><text x="640" y="335.5" text-anchor="middle" font-size="16" font-weight="700" fill="#1d2329">10</text>
+<text x="1035" y="758" font-size="13" text-anchor="end" fill="#5f6871">to power mast ←</text>
+<text x="1110" y="88" font-size="30" font-weight="700" fill="#1d2329">Parts list</text>
+<text x="1110" y="116" font-size="15" fill="#5f6871">From the Moon profile in vnmach/body.py</text>
+<text x="1110" y="150" font-size="12.5" font-weight="700" fill="#5f6871" letter-spacing="1" text-anchor="start">#</text>
+<text x="1162" y="150" font-size="12.5" font-weight="700" fill="#5f6871" letter-spacing="1" text-anchor="start">PART</text>
+<text x="1610" y="150" font-size="12.5" font-weight="700" fill="#5f6871" letter-spacing="1" text-anchor="end">MASS</text>
+<line x1="1110" y1="159" x2="1610" y2="159" stroke="#1d2329" stroke-width="1.5"/>
+<rect x="1110" y="168" width="6" height="56" fill="#5e7389"/>
+<text x="1124" y="190" font-size="15" font-weight="700" fill="#1d2329">1</text>
+<text x="1162" y="190" font-size="15.5" font-weight="600" fill="#1d2329">1 frame: 4 cast beams, 2 end plates</text>
+<text x="1162" y="211" font-size="13.5" fill="#5f6871">cast iron, iron-silicon · made on the Moon</text>
+<text x="1610" y="190" font-size="15.5" text-anchor="end" fill="#1d2329">48 kg</text>
+<line x1="1110" y1="226" x2="1610" y2="226" stroke="#dfe2e6" stroke-width="1"/>
+<rect x="1110" y="234" width="6" height="56" fill="#5e7389"/>
+<text x="1124" y="256" font-size="15" font-weight="700" fill="#1d2329">2</text>
+<text x="1162" y="256" font-size="15.5" font-weight="600" fill="#1d2329">4 wheels: woven wire mesh, grousers</text>
+<text x="1162" y="277" font-size="13.5" fill="#5f6871">drawn iron wire · made on the Moon</text>
+<text x="1610" y="256" font-size="15.5" text-anchor="end" fill="#1d2329">24 kg</text>
+<line x1="1110" y1="292" x2="1610" y2="292" stroke="#dfe2e6" stroke-width="1"/>
+<rect x="1110" y="300" width="6" height="56" fill="#5e7389"/>
+<text x="1124" y="322" font-size="15" font-weight="700" fill="#1d2329">3, 6</text>
+<text x="1162" y="322" font-size="15.5" font-weight="600" fill="#1d2329">8 motors: switched reluctance</text>
+<text x="1162" y="343" font-size="13.5" fill="#5f6871">Fe-Si laminations, Al coils, glass fibre · made on the Moon</text>
+<text x="1610" y="322" font-size="15.5" text-anchor="end" fill="#1d2329">96 kg</text>
+<line x1="1110" y1="358" x2="1610" y2="358" stroke="#dfe2e6" stroke-width="1"/>
+<rect x="1110" y="366" width="6" height="56" fill="#5e7389"/>
+<text x="1124" y="388" font-size="15" font-weight="700" fill="#1d2329">4, 6</text>
+<text x="1162" y="388" font-size="15.5" font-weight="600" fill="#1d2329">8 reducers: cycloidal, lapped</text>
+<text x="1162" y="409" font-size="13.5" fill="#5f6871">cast iron · made on the Moon</text>
+<text x="1610" y="388" font-size="15.5" text-anchor="end" fill="#1d2329">96 kg</text>
+<line x1="1110" y1="424" x2="1610" y2="424" stroke="#dfe2e6" stroke-width="1"/>
+<rect x="1110" y="432" width="6" height="56" fill="#5e7389"/>
+<text x="1124" y="454" font-size="15" font-weight="700" fill="#1d2329">5</text>
+<text x="1162" y="454" font-size="15.5" font-weight="600" fill="#1d2329">1 arm: 4 joints + scoop tool</text>
+<text x="1162" y="475" font-size="13.5" fill="#5f6871">Fe-Si tubes, aluminium · made on the Moon</text>
+<text x="1610" y="454" font-size="15.5" text-anchor="end" fill="#1d2329">18 kg</text>
+<line x1="1110" y1="490" x2="1610" y2="490" stroke="#dfe2e6" stroke-width="1"/>
+<rect x="1110" y="498" width="6" height="56" fill="#5e7389"/>
+<text x="1124" y="520" font-size="15" font-weight="700" fill="#1d2329">7, 8</text>
+<text x="1162" y="520" font-size="15.5" font-weight="600" fill="#1d2329">1 harness: tether, cables, radiator</text>
+<text x="1162" y="541" font-size="13.5" fill="#5f6871">aluminium, glass insulation · made on the Moon</text>
+<text x="1610" y="520" font-size="15.5" text-anchor="end" fill="#1d2329">12 kg</text>
+<line x1="1110" y1="556" x2="1610" y2="556" stroke="#dfe2e6" stroke-width="1"/>
+<rect x="1110" y="564" width="6" height="56" fill="#d9822b"/>
+<text x="1124" y="586" font-size="15" font-weight="700" fill="#1d2329">9, 10</text>
+<text x="1162" y="586" font-size="15.5" font-weight="600" fill="#1d2329">1 avionics: compute, cameras, lidar</text>
+<text x="1162" y="607" font-size="13.5" fill="#5f6871">Earth-made electronics · made on Earth</text>
+<text x="1610" y="586" font-size="15.5" text-anchor="end" fill="#1d2329">9 kg</text>
+<line x1="1110" y1="622" x2="1610" y2="622" stroke="#dfe2e6" stroke-width="1"/>
+<text x="1162" y="652" font-size="16" font-weight="700" fill="#1d2329">Total</text>
+<text x="1610" y="652" font-size="16" font-weight="700" text-anchor="end" fill="#1d2329">303 kg</text>
+<text x="1162" y="678" font-size="14" fill="#5f6871">97% made on the Moon by mass; only the avionics come from Earth.</text>
+<text x="1110" y="722" font-size="12.5" font-weight="700" fill="#5f6871" letter-spacing="1">MATERIALS</text>
+<rect x="1110" y="733" width="18" height="18" rx="3" fill="#4b5157" stroke="#1d2329" stroke-width="1"/>
+<text x="1138" y="747" font-size="14.5" fill="#1d2329">Cast iron</text>
+<rect x="1110" y="759" width="18" height="18" rx="3" fill="#5e7389" stroke="#1d2329" stroke-width="1"/>
+<text x="1138" y="773" font-size="14.5" fill="#1d2329">Iron-silicon (MRE)</text>
+<rect x="1110" y="785" width="18" height="18" rx="3" fill="#b8c3cd" stroke="#1d2329" stroke-width="1"/>
+<text x="1138" y="799" font-size="14.5" fill="#1d2329">Aluminium (MRE)</text>
+<rect x="1110" y="811" width="18" height="18" rx="3" fill="#bfe3ea" stroke="#1d2329" stroke-width="1"/>
+<text x="1138" y="825" font-size="14.5" fill="#1d2329">Glass / glass fibre</text>
+<rect x="1110" y="837" width="18" height="18" rx="3" fill="#d9822b" stroke="#1d2329" stroke-width="1"/>
+<text x="1138" y="851" font-size="14.5" fill="#1d2329">Imported from Earth</text>
+<text x="1325" y="746" font-size="13.5" fill="#5f6871">Motors and reducers come in pairs:</text>
+<text x="1325" y="767" font-size="13.5" fill="#5f6871">one per wheel hub (4), one per arm joint (4).</text>
+<text x="1325" y="788" font-size="13.5" fill="#5f6871">Joints turn in plain bushings: iron shafts</text>
+<text x="1325" y="809" font-size="13.5" fill="#5f6871">in cast-basalt sleeves, so no metal-on-metal</text>
+<text x="1325" y="830" font-size="13.5" fill="#5f6871">contact cold-welds in vacuum.</text>
+<text x="1325" y="851" font-size="13.5" fill="#5f6871">The tether brings 100–300 V DC from the</text>
+<text x="1325" y="872" font-size="13.5" fill="#5f6871">power mast: no battery to make or ship.</text>
+</svg>
